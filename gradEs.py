@@ -25,3 +25,5 @@ def gradEs(xk, yk, xkp1, ykp1, l_k, k):
     F = 0.5 * k * l_k * F  # Scale by k and l_k
 
     return F
+
+#test
