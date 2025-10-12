@@ -166,3 +166,4 @@ plt.ylabel('Middle Node y-coordinate')
 plt.title('Middle Node y-coordinate vs. Time')
 plt.grid(True)
 plt.show()
+
