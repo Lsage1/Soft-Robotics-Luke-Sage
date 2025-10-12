@@ -10,6 +10,7 @@ from plot import plot
 
 nodes_file_path = 'nodes.txt'
 node_coordinates = []
+
 try:
     with open(nodes_file_path, 'r') as f:
         for line in f:
@@ -32,8 +33,21 @@ try:
 
     print("Node coordinates successfully loaded into a numpy matrix.")
     display(node_matrix)
+
 except FileNotFoundError:
     print(f"Error: The file '{nodes_file_path}' was not found.")
+except Exception as e:
+    print(f"An error occurred: {e}")
+
+free_nodes_file_path = 'free_nodes.txt'
+
+try:
+    with open(free_nodes_file_path, 'r') as f:
+        line = f.readline()
+        free_nodes = [part.strip() for part in line.split(',')]
+        print("fixed nodes: ", free_nodes)
+except FileNotFoundError:
+    print(f"Error: The file '{free_nodes_file_path}' was not found.")
 except Exception as e:
     print(f"An error occurred: {e}")
 
@@ -118,7 +132,15 @@ maxTime = 10   # total time of simulation
 t = np.arange(0, maxTime + dt, dt)
 
 # free indices
-free_DOF = np.arange(2, ndof - 2)
+#free_DOF = np.arange(2, ndof - 2)
+
+free_DOF = []
+for i in free_nodes:
+    i = int(i)
+    free_DOF.append(i*2)
+    free_DOF.append(i*2+1)
+free_DOF = [2, 3, 4, 5]
+print(ndof, free_DOF)
 
 # Container to store y-coordinate of middle node
 y_middle = np.zeros(len(t))

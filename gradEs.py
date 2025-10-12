@@ -26,4 +26,3 @@ def gradEs(xk, yk, xkp1, ykp1, l_k, k):
 
     return F
 
-#test
