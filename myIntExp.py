@@ -17,7 +17,7 @@ def myIntExp(t_new, x_old, u_old, free_DOF, stiffness_matrix, index_matrix, m, d
 
     u_new = u_old
     x_new = x_old
-    print(m)
+
     u_new[free_DOF] = u_old[free_DOF] - (f[free_DOF] / m[free_DOF]) * dt
     x_new[free_DOF] = x_old[free_DOF] + u_new[free_DOF] * dt
 
