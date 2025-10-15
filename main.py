@@ -4,6 +4,7 @@ from IPython.display import display
 
 from getFexternal import getFexternal
 from myInt import myInt
+from myIntExp import myIntExp
 from plot import plot
 
 # Course Provided: Input and interpret Nodes
@@ -127,8 +128,8 @@ W = getFexternal(m)
 #############################################################################################
 # Main Simulation Loop:
 
-dt = 0.1 # Time step size
-maxTime = 10   # total time of simulation
+dt = 0.01 # Time step size
+maxTime = 1   # total time of simulation
 t = np.arange(0, maxTime + dt, dt)
 
 # free indices
@@ -139,19 +140,25 @@ for i in free_nodes:
     i = int(i)
     free_DOF.append(i*2)
     free_DOF.append(i*2+1)
-free_DOF = [2, 3, 4, 5]
-print(ndof, free_DOF)
+#print(ndof, free_DOF)
 
 # Container to store y-coordinate of middle node
 y_middle = np.zeros(len(t))
 y_middle[0] = x_old[3] # y-coordinate of middle node
 
+
+plot(x_old, index_matrix, 0)
+
 for k in range(len(t)-1):
   t_new = t[k+1]
+  #print(k, round(t_new, 2))
 
 
-  x_new, u_new = myInt(t_new, x_old, u_old, free_DOF, stiffness_matrix, index_matrix, m, dt, l_k) # I added l_k to this function
-  if k % 10 == 0:
+  #x_new, u_new = myInt(t_new, x_old, u_old, free_DOF, stiffness_matrix, index_matrix, m, dt, l_k) # I added l_k to this function
+  x_new, u_new = myIntExp(t_new, x_old, u_old, free_DOF, stiffness_matrix, index_matrix, m, dt, l_k) # I added l_k to this function
+  #if k % 10 == 0:
+  if t_new in [0, 0.1, 1, 10, 100]:
+    print("output a graph at t =", t_new)
     plot(x_new, index_matrix, t_new)
   y_middle[k+1] = x_new[3]
 

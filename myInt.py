@@ -32,6 +32,8 @@ def myInt(t_new, x_old, u_old, free_DOF, stiffness_matrix, index_matrix, m, dt, 
     # Calculate error based on the force in free DOFs
     err = np.linalg.norm(f_free)
 
+
+
   u_new = (x_new - x_old) / dt
 
   return x_new, u_new
