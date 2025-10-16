@@ -1,0 +1,13 @@
+Homework 1 is a node spring system calculator
+
+To evaluate the system, call/run Homework1.py
+
+Using nodes.txt, input coordinates to establish nodes on individual lines.
+Then, connect the nodes in springs.txt. A spring is identified by the indexes of two nodes, and the stiffness.
+The form is as follows with one spring per line: indx1, indx2, stiffness
+Identify which of the nodes are to be free in free_nodes.txt. each free node should be separated by commas.
+
+To change to the explicit integrator rather than the implicit integrator, uncomment out line 159, and comment out 160.
+
+Or, replace myInt with myIntExp, as below.
+  #x_new, u_new = myIntExp(t_new, x_old, u_old, free_DOF, stiffness_matrix, index_matrix, m, dt, l_k) # I added l_k to this function
