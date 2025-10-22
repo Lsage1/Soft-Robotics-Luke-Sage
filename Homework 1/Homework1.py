@@ -30,6 +30,7 @@ try:
                 print(f"Skipping line due to incorrect format: {line.strip()}")
 
     # Convert the list of coordinates to a NumPy array
+
     node_matrix = np.array(node_coordinates)
 
     print("Node coordinates successfully loaded into a numpy matrix.")

@@ -4,7 +4,7 @@ from getForceJacobian import getForceJacobian
 
 
 def myInt(t_new, x_old, u_old, free_DOF, stiffness_matrix, index_matrix, m, dt, l_k):
-  print("Implicit")
+
   # Guess solution for x_new
   x_new = x_old.copy() # Start with a copy of x_old as the initial guess
 
