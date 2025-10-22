@@ -16,7 +16,7 @@ midNode = nv//2 + 1
 dt = 0.01 # second
 
 # Rod length
-RodLength = 0.1 # meter
+RodLength = 1 # meter
 
 # Discrete length / reference length
 deltaL = RodLength / (nv - 1)
