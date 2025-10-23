@@ -50,7 +50,7 @@ totalTime = 1 # second
 
 # Variables related to plotting
 saveImage = 0
-plotStep = 20 # Every 5-th step will be plotted
+plotStep = 50 # Every 5-th step will be plotted
 
 ######################################################################################################
 
@@ -191,4 +191,7 @@ if saveImage:
 ########################################################################
 # Plot theoretical euler beam theory
 
-#ymax_T = P * c
+c = min(loadPos, (rodLength-loadPos))
+ymin_T = P * c * (rodLength**2 - c**2)**1.5 / (9*np.sqrt(3)*EI*rodLength)
+print("Theoretical Minimum Y value", ymin_T)
+print("Simulated minimum Y value", all_pos[-1])
