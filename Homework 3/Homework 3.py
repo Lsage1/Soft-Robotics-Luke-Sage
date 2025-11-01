@@ -6,6 +6,8 @@ from crossMat import crossMat
 from getFs import getFs
 from gradEb import gradEb
 from hessEs import hessEs
+from staticSolver import staticSolver
+
 
 
 nv = 50 # number of nodes/vertices
