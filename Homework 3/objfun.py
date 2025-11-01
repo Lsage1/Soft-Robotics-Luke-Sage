@@ -9,7 +9,8 @@ def objfun(q_old, u_old, dt, tol, maximum_iter,
            EI, EA, # elastic stiffness
            W, C, # external force
            deltaL,
-           free_index):
+           free_index,
+           fixed_index):
 
   q_new = q_old.copy() # Guess solution
 

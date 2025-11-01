@@ -50,7 +50,7 @@ totalTime = 1 # second
 
 # Variables related to plotting
 saveImage = 0
-plotStep = 100 # Every 5-th step will be plotted
+plotStep = 50 # Every 5-th step will be plotted
 
 ######################################################################################################
 
@@ -102,8 +102,8 @@ u0 = np.zeros(2 * nv) # old velocity
 # Boundary Conditions:
 
 all_DOFs = np.arange(ndof) # Set of all DOFs
-fixed_index = np.array([0, 1, nv*2-1, nv*2-2, nv*2-3, nv&2-4]) # Fixed DOFs
-
+fixed_index = np.array([0, 1, nv*2-4, nv*2-3, nv*2-2, nv*2-1]) # Fixed DOFs
+control_index = np.array([nv*2-4, nv*2-3, nv*2-2, nv*2-1]) # indices used to control right side of the bar
 # Free index
 free_index = np.setdiff1d(all_DOFs, fixed_index) # All the DOFs are free except the fixed ones
 
@@ -114,11 +114,22 @@ Nsteps = round( totalTime / dt )
 
 ctime = 0 # Current time
 
+xc = 1
+yc = 0
+thetac = np.pi / 2
+
 # Loop over the time steps
 for timeStep in range(1,Nsteps):
 
+  q0[nv*2-2] = xc # x_n
+  q0[nv*2-1] = yc # y_n
+  q0[nv*2-4] = xc - deltaL * np.cos(thetac) # X n-1
+  q0[nv*2-3] = yc - deltaL * np.sin(thetac) # Y n-1
+
+
+
   q_new, error = objfun(q0, u0, dt, tol, maximum_iter, m, mMat, EI, EA, W, C,
-                        deltaL, free_index)
+                        deltaL, free_index, fixed_index)
   if error < 0:
     print('Could not converge.')
     break

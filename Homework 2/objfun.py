@@ -41,6 +41,9 @@ def objfun(q_old, u_old, dt, tol, maximum_iter,
     f_free = f[free_index]
     J_free = J[np.ix_(free_index, free_index)]
 
+    # Update Fixed Boundary Conditions
+
+
     # Newton's update (all DOFs are FREE)
     dq_free = np.linalg.solve(J_free, f_free)
     q_new[free_index] = q_new[free_index] - dq_free
