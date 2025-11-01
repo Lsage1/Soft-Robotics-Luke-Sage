@@ -7,7 +7,6 @@ from getFs import getFs
 from gradEb import gradEb
 from hessEs import hessEs
 
-print(np.linspace(1,200,1))
 
 nv = 50 # number of nodes/vertices
 ndof = 2 * nv
