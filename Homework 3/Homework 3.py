@@ -7,10 +7,10 @@ from getFs import getFs
 from gradEb import gradEb
 from hessEs import hessEs
 from staticSolver import staticSolver
+from getDirichlet import getDirichlet
 
 
-
-nv = 50 # number of nodes/vertices
+nv = 51 # number of nodes/vertices
 ndof = 2 * nv
 midNode = nv//2 + 1
 
@@ -118,18 +118,21 @@ ctime = 0 # Current time
 
 xc = 1
 yc = 0
-thetac = np.pi / 2
+thetac = 0 # np.pi / 2
+
+x_mid_c = 0.5
+y_mid_c = 0.05
 
 # Loop over the time steps
 for timeStep in range(1,Nsteps):
 
-  q0[nv*2-2] = xc # x_n
-  q0[nv*2-1] = yc # y_n
-  q0[nv*2-4] = xc - deltaL * np.cos(thetac) # X n-1
-  q0[nv*2-3] = yc - deltaL * np.sin(thetac) # Y n-1
 
 
 
+  xc_new, yc_new, thetac_new, error = getDirichlet(xc, yc, thetac, x_mid_c, y_mid_c, nv, q0, tol, maximum_iter, EI, EA, W, deltaL, free_index)
+
+
+  quit()
   q_new, error = objfun(q0, u0, dt, tol, maximum_iter, m, mMat, EI, EA, W, C,
                         deltaL, free_index, fixed_index)
   if error < 0:
