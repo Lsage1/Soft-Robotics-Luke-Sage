@@ -120,7 +120,7 @@ xc = 1
 yc = 0
 thetac = 0 # np.pi / 2
 
-x_mid_c = 0.5
+x_mid_c = 0.55
 y_mid_c = 0.05
 
 # Loop over the time steps

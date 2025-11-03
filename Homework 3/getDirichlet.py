@@ -16,6 +16,8 @@ def getDirichlet(xc, yc, thetac, x_mid, y_mid, nv,
     dy = 10e-2 * deltaL # y perturbation value
     dtheta = 10e-3 # Theta perturbation value
 
+    # Control Jacobian:
+    J_c = np.zeros((2, 3))
 
     # Get reference position of all nodes given guess end conditions xc, yc, thetac.
     print(x_mid, y_mid)
@@ -23,14 +25,28 @@ def getDirichlet(xc, yc, thetac, x_mid, y_mid, nv,
     if error < 0:
         print('Static Solver could not converge.')
 
-    print("beam middle position: ", q_original[nv+1], q_original[nv])
-
+    #print("beam middle position: ", q_original[nv-1], q_original[nv])
+    residual = np.array([[x_mid - q_original[nv-1]], [y_mid - q_original[nv]]] )
+    print("residual: ")
+    print(residual)
 
     # Get position of all nodes if X is perturbed based on guess
-    q_p_x, error = staticSolver(q0, tol, maximum_iter, EI, EA, W, deltaL,free_index)
+    q0_xpert = q0.copy()
+    #q0_xpert[nv * 2 - 2] = q0_xpert[nv * 2 - 2] + dx
+    q0_xpert[nv * 2 - 2] = xc + dx  # x_n
+    q0_xpert[nv * 2 - 1] = yc  # y_n
+    q0_xpert[nv * 2 - 4] = xc + dx - deltaL * np.cos(thetac)  # X n-1
+    q0_xpert[nv * 2 - 3] = yc - deltaL * np.sin(thetac)  # Y n-1
+    q_p_x, error = staticSolver(q0_xpert, tol, maximum_iter, EI, EA, W, deltaL,free_index)
     if error < 0:
         print('Static Solver could not converge. (x perturbation)')
 
+    print(q_original[nv-1], q_p_x[nv-1])
+
+    J_c[0,0] = (q_p_x[nv-1] - q_original[nv-1]) / dx
+    J_c[1,0] = (q_p_x[nv] - q_original[nv]) / dx
+
+    print(J_c)
     # Get position of all nodes if Y is perturbed based on guess
     # Get position of all nodes if thetac is perturbed based on guess
 
