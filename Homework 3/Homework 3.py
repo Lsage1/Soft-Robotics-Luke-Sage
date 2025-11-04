@@ -33,10 +33,7 @@ for k in range(nv):
   R[k] = deltaL/10 # meter
 R[midNode-1] = 0.025 # meter
 
-# Densities
-rho_metal = 7000 # kg/m^3
-rho_gl = 1000
-rho = rho_metal  - rho_gl
+
 
 # Cross-sectional radii
 innerRadius = 0.011 #m
@@ -56,7 +53,7 @@ totalTime = 1000 # second
 
 # Variables related to plotting
 saveImage = 0
-plotStep = 5 # Every 5-th step will be plotted
+plotStep = 50 # Every 5-th step will be plotted
 
 ######################################################################################################
 
@@ -97,9 +94,7 @@ for k in range(0, nv):
   W[2*k+1] = m * g[1] # Weight along y
 # Gradient of W = 0
 
-
-# Viscous damping (external force)
-C = np.zeros((2 * nv, 2 * nv)) # Viscous Damping is set to zero
+C = np.zeros((2 * nv, 2 * nv))
 
 # Initial conditions
 q0 = np.zeros(2 * nv)
@@ -130,17 +125,33 @@ xc = 1
 yc = 0
 thetac = 0 # np.pi / 2
 
-x_mid_c = 0.55
-y_mid_c = 0.05
+x_mid_c = 0.5
+y_mid_c = 0.0
+
+xc_store = np.zeros(Nsteps)
+yc_store = np.zeros(Nsteps)
+thetac_store = np.zeros(Nsteps)
+
+x_traj_store = np.zeros(Nsteps)
+y_traj_store = np.zeros(Nsteps)
+
+for timeStep in range(0, Nsteps):
+    x_traj_store[timeStep] = rodLength / 2 * np.cos(np.pi / 2 * timeStep / 1000)
+    y_traj_store[timeStep] = - rodLength / 2 * np.sin(np.pi / 2 * timeStep / 1000)
 
 # Loop over the time steps
-for timeStep in range(1,Nsteps):
+for timeStep in range(0,Nsteps):
   print(timeStep)
 
+  # Calculate desired x_mid and y_mid from trajectory
   x_mid_c = rodLength / 2 * np.cos(np.pi/2 * timeStep/1000)
   y_mid_c = - rodLength / 2 * np.sin(np.pi/2 * timeStep/1000)
 
   xc_new, yc_new, thetac_new = getDirichlet(xc, yc, thetac, x_mid_c, y_mid_c, nv, q0, tol, maximum_iter, EI, EA, W, deltaL, free_index)
+
+  xc_new = np.clip(xc_new, 0, 2)
+  yc_new = np.clip(yc_new, -1.5, 1.5)
+  thetac_new = np.clip(thetac_new, -np.pi/2, np.pi/2)
 
   q0[nv * 2 - 2] = xc_new  # x_n
   q0[nv * 2 - 1] = yc_new  # y_n
@@ -158,8 +169,14 @@ for timeStep in range(1,Nsteps):
   # Save position of the bottom node
   minY = (min(q_new[1::2])) # Get the minimum y component of position at this time step
 
+  # Store control inputs over time
+  xc_store[timeStep] = xc_new
+  yc_store[timeStep] = yc_new
+  thetac_store[timeStep] = thetac_new
+
   xc = xc_new.copy()
   yc = yc_new.copy()
+  thetac = thetac_new.copy()
   q0 = q_new.copy() # New position becomes old position
   u0 = u_new.copy() # New velocity becomes old velocity
 
@@ -174,11 +191,12 @@ for timeStep in range(1,Nsteps):
     plt.clf() # Clear current figure
     plt.plot(x_arr, y_arr, 'ko-')
     plt.plot(x_mid_c, y_mid_c, 'ro')
+    plt.plot(x_traj_store, y_traj_store, 'r-')
     plt.title(f't={ctime:.4f}s')
     plt.xlabel('x')
     plt.ylabel('y')
     plt.axis('equal')
-
+    plt.title(f't={ctime:.4f}s')
     filename = f"plot{timeStep:03d}.png"
     save_path = os.path.join(save_folder, filename)
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -186,15 +204,29 @@ for timeStep in range(1,Nsteps):
     print(f"Saved {save_path}")
     #plt.show()
 
-# Store minimum load conditions
-#minYEuler_save[i] = ymin_T
-#minY_save[i] = minY
 
       #############################################################################
+h2 = plt.figure(2)
+plt.clf()
+plt.xlabel('time (sec)')
+plt.ylabel('x control position (m)')
+plt.plot(np.linspace(0, totalTime, Nsteps), xc_store)
+plt.show()
 
-# Plot the middle node information as a function of time
-t_arr = np.linspace(0, totalTime, Nsteps)
 
+h3 = plt.figure(3)
+plt.clf()
+plt.xlabel('time (sec)')
+plt.ylabel('y control position (m)')
+plt.plot(np.linspace(0, totalTime, Nsteps), yc_store)
+plt.show()
+
+h4 = plt.figure(4)
+plt.clf()
+plt.xlabel('time (sec)')
+plt.ylabel('theta control position (rad)')
+plt.plot(np.linspace(0, totalTime, Nsteps), thetac_store)
+plt.show()
 
 
 
