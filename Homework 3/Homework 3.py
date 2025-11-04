@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 from objfun import objfun
 from crossMat import crossMat
@@ -9,13 +10,16 @@ from hessEs import hessEs
 from staticSolver import staticSolver
 from getDirichlet import getDirichlet
 
+save_folder = "plots"
+os.makedirs(save_folder, exist_ok=True)
+
 
 nv = 51 # number of nodes/vertices
 ndof = 2 * nv
 midNode = nv//2 + 1
 
 # Time step
-dt = 0.01 # second
+dt = 2 # second
 
 # Rod length
 rodLength = 1 # meter
@@ -48,11 +52,11 @@ visc = 1000.0 # Pa-s
 maximum_iter = 1000
 
 # Total time
-totalTime = 1 # second
+totalTime = 1000 # second
 
 # Variables related to plotting
 saveImage = 0
-plotStep = 50 # Every 5-th step will be plotted
+plotStep = 5 # Every 5-th step will be plotted
 
 ######################################################################################################
 
@@ -62,7 +66,7 @@ EI = ymod * np.pi * (outerRadius**4 - innerRadius**4) / 4 # Flexural Rigidity = 
 EA = ymod * np.pi * (outerRadius**2 - innerRadius**2) # Axial Rigidity N/m^3
 
 # Tolerance
-tol = EI / rodLength ** 2 * 1e-3
+tol = rodLength * 1e-6
 
 # Geometry
 nodes = np.zeros((nv, 2))
@@ -83,9 +87,14 @@ mMat = np.diag(m)
 
 W = np.zeros( 2 * nv)
 g = np.array([0, -9.8]) # m/s^2
+
+p = 2700 # Density
+A = np.pi*outerRadius**2 - np.pi*innerRadius**2
+m = p * A * rodLength / (nv - 1)
+
 for k in range(0, nv):
-  W[2*k] = 4.0 / 3.0 * np.pi * R[k]**3 * rho * g[0] # Weight along x
-  W[2*k+1] = 4.0 / 3.0 * np.pi * R[k]**3 * rho * g[1] # Weight along y
+  W[2*k] = m * g[0] # Weight along x
+  W[2*k+1] = m * g[1] # Weight along y
 # Gradient of W = 0
 
 
@@ -116,6 +125,7 @@ Nsteps = round( totalTime / dt )
 
 ctime = 0 # Current time
 
+# initialize bc positions
 xc = 1
 yc = 0
 thetac = 0 # np.pi / 2
@@ -125,14 +135,18 @@ y_mid_c = 0.05
 
 # Loop over the time steps
 for timeStep in range(1,Nsteps):
+  print(timeStep)
 
+  x_mid_c = rodLength / 2 * np.cos(np.pi/2 * timeStep/1000)
+  y_mid_c = - rodLength / 2 * np.sin(np.pi/2 * timeStep/1000)
 
+  xc_new, yc_new, thetac_new = getDirichlet(xc, yc, thetac, x_mid_c, y_mid_c, nv, q0, tol, maximum_iter, EI, EA, W, deltaL, free_index)
 
+  q0[nv * 2 - 2] = xc_new  # x_n
+  q0[nv * 2 - 1] = yc_new  # y_n
+  q0[nv * 2 - 4] = xc_new - deltaL * np.cos(thetac_new)  # X n-1
+  q0[nv * 2 - 3] = yc_new - deltaL * np.sin(thetac_new)  # Y n-1
 
-  xc_new, yc_new, thetac_new, error = getDirichlet(xc, yc, thetac, x_mid_c, y_mid_c, nv, q0, tol, maximum_iter, EI, EA, W, deltaL, free_index)
-
-
-  quit()
   q_new, error = objfun(q0, u0, dt, tol, maximum_iter, m, mMat, EI, EA, W, C,
                         deltaL, free_index, fixed_index)
   if error < 0:
@@ -143,6 +157,9 @@ for timeStep in range(1,Nsteps):
   ctime += dt # Update current time
   # Save position of the bottom node
   minY = (min(q_new[1::2])) # Get the minimum y component of position at this time step
+
+  xc = xc_new.copy()
+  yc = yc_new.copy()
   q0 = q_new.copy() # New position becomes old position
   u0 = u_new.copy() # New velocity becomes old velocity
 
@@ -156,11 +173,18 @@ for timeStep in range(1,Nsteps):
     h1 = plt.figure(1)
     plt.clf() # Clear current figure
     plt.plot(x_arr, y_arr, 'ko-')
+    plt.plot(x_mid_c, y_mid_c, 'ro')
     plt.title(f't={ctime:.4f}s')
     plt.xlabel('x')
     plt.ylabel('y')
     plt.axis('equal')
-    plt.show()
+
+    filename = f"plot{timeStep:03d}.png"
+    save_path = os.path.join(save_folder, filename)
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"Saved {save_path}")
+    #plt.show()
 
 # Store minimum load conditions
 #minYEuler_save[i] = ymin_T
