@@ -1,0 +1,7 @@
+This project generates a solution to the beam bending Dirichlet problem presented in HW3.
+To run the project, run "Homework 3.py".
+
+To change the desired trajectory over time, modify the following lines in HW4:
+
+x_mid_c = rodLength / 2 * np.cos(np.pi/2 * timeStep/1000)
+y_mid_c = - rodLength / 2 * np.sin(np.pi/2 * timeStep/1000)
