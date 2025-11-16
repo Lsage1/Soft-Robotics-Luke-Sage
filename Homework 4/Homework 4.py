@@ -14,10 +14,10 @@ ne = nv - 1
 ndof = 3*nv + ne
 
 # Helix parameters
-r0 = 0.001 # cross-sectional radius of the rod # Given, d = 0.002 m
-D = 0.06 # meter: helix diameter
+r0 = 0.002 # cross-sectional radius of the rod # Given, d = 0.002 m
+D = 0.04 # meter: helix diameter
 pitch = 2 * r0 * 10 # Pitch is the same as the cross-sectional diameter
-N = 3 # Number of turns
+N = 5 # Number of turns
 # a and b are parameters used in standard (wikipedia) definition of helix
 a = D/2 # Helix radius
 b = pitch / (2.0 * np.pi)
