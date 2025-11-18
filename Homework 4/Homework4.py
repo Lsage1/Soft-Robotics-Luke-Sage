@@ -4,5 +4,5 @@ import subprocess
 #subprocess.run(["python", "Task1.py"])
 
 # Task 2: Sweep over a large number of forces to determine the spring stiffness of the helix
-subprocess.run(["python", "Task2.py"])
-#subprocess.run(["python", "script3.py"])
+#subprocess.run(["python", "Task2.py"])
+subprocess.run(["python", "Task3.py"])

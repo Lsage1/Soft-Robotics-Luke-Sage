@@ -215,7 +215,7 @@ for idx, F_end_iter in enumerate(F_end_list):
                   satisfied = False
           if satisfied:
               breakStep = timeStep
-              endZ_list[idx] =
+              endZ_list[idx] = endZ[timeStep]
               break
 
 
@@ -227,3 +227,25 @@ for idx, F_end_iter in enumerate(F_end_list):
       a1_old = a1_new.copy()
       a2_old = a2_new.copy()
 
+plt.figure(3)
+
+# Use least differences method to solve for y = mx
+m = np.sum(F_end_list * np.abs(endZ_list)) / np.sum(F_end_list**2)
+F_fit = np.linspace(min(F_end_list)*.5, max(F_end_list)*1.1, 5)
+Z_fit = m * F_fit
+plt.plot(F_fit, Z_fit, 'b-', label = "fit (intercept = 0)")
+
+#print("F list: ", F_end_list, len(endZ_list))
+#print("End Z list: ", endZ_list, len(endZ_list))
+print("Slope of Fit is: ", m)
+print("Spring Stiffness 1/m = ", 1/m)
+plt.plot(F_end_list, np.abs(endZ_list), 'ro-')
+plt.xscale('log')
+plt.yscale('log')
+plt.xlabel("Axial Force (N)")
+plt.ylabel("Max Displacement (m)")
+plt.legend()
+plt.show()
+
+
+print("Finished Task 2")

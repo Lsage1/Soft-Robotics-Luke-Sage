@@ -8,6 +8,8 @@ from getKappa import getKappa
 from objfun import objfun
 from computeKappa import computeKappa
 
+print("Running Task 1")
+
 # Inputs
 nv = 50 # number of nodes
 ne = nv - 1
@@ -230,3 +232,5 @@ plt.legend()
 plt.xlabel('Time (s)')
 plt.ylabel('End Z (m)')
 plt.show()
+
+print("Finished Task 1")
