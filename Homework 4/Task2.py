@@ -58,7 +58,7 @@ GJ = G * np.pi * r0**4 / 2.0 # Twisting stiffness
 
 # TIME PARAMETERS
 
-totalTime = 5.0 # seconds - total time of the simulation
+totalTime = 30 # seconds - total time of the simulation if no steady state reached
 dt = 0.1 # TIme step size -- may need to be adjusted
 
 # Tolerance
@@ -87,133 +87,143 @@ massMatrix = np.diag(massVector)
 # External Force: Point load on the last node (instead of gravity)
 
 F_end = EI / L ** 2
-vectorLoad = np.array([0, 0, -F_end]) # Point load vector
+forceCount = 5
+F_end_list = F_end * np.logspace(-2, 1, forceCount)
+endZ_list = np.zeros(forceCount)
 
-Fg = np.zeros(ndof) # Eexternal force vector
-c = nv-1
-ind = [4*c, 4*c + 1, 4*c + 2] # last node
-Fg[ind] += vectorLoad
+for idx, F_end_iter in enumerate(F_end_list):
+    print("* * * * * * * Force Value: ", F_end_iter)
 
-# INITIAL DOF VECTOR
+    vectorLoad = np.array([0, 0, -F_end_iter]) # Point load vector
 
-qOld = np.zeros(ndof)
-for c in range(nv):
-  ind = [4*c, 4*c + 1, 4*c + 2] # c-th node
-  qOld[ind] = nodes[c, :]
+    Fg = np.zeros(ndof) # External force vector
+    c = nv-1
+    ind = [4*c, 4*c + 1, 4*c + 2] # last node
+    Fg[ind] += vectorLoad
 
-uOld = np.zeros_like(qOld) # Velocity is zero initially
+    # INITIAL DOF VECTOR
 
-# plotrod_simple(qOld, 0)
+    qOld = np.zeros(ndof)
+    for c in range(nv):
+        ind = [4*c, 4*c + 1, 4*c + 2] # c-th node
+        qOld[ind] = nodes[c, :]
 
-# COMPUTE THE REFERENCE LENGTHS:
+    uOld = np.zeros_like(qOld) # Velocity is zero initially
 
-# Reference length of each edge
-refLen = np.zeros(ne)
-for c in range(ne):
-  refLen[c] = np.linalg.norm(nodes[c + 1, :] - nodes[c, :])
+    # plotrod_simple(qOld, 0)
 
-voronoiRefLen = np.zeros(nv)
-for c in range(nv):
-  if c == 0:
-    voronoiRefLen[c] = 0.5 * refLen[c]
-  elif c == nv - 1:
-    voronoiRefLen[c] = 0.5 * refLen[c - 1]
-  else:
-    voronoiRefLen[c] = 0.5 * (refLen[c - 1] + refLen[c])
+    # COMPUTE THE REFERENCE LENGTHS:
 
-# COMPUTE THE FRAMES
+    # Reference length of each edge
+    refLen = np.zeros(ne)
+    for c in range(ne):
+        refLen[c] = np.linalg.norm(nodes[c + 1, :] - nodes[c, :])
 
-# Reference frame (At t=0, we initialize it with space parallel reference frame but not mandatory)
-tangent = computeTangent(qOld)
+    voronoiRefLen = np.zeros(nv)
+    for c in range(nv):
+        if c == 0:
+            voronoiRefLen[c] = 0.5 * refLen[c]
+        elif c == nv - 1:
+            voronoiRefLen[c] = 0.5 * refLen[c - 1]
+        else:
+            voronoiRefLen[c] = 0.5 * (refLen[c - 1] + refLen[c])
 
-t0 = tangent[0, :]
-arb_v = np.array([0, 0, -1])
-a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
-if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3: # Check if t0 and arb_v are parallel
-  arb_v = np.array([0, 1, 0])
-  a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+    # COMPUTE THE FRAMES
 
-a1, a2 = computeSpaceParallel(a1_first, qOld)
+    # Reference frame (At t=0, we initialize it with space parallel reference frame but not mandatory)
+    tangent = computeTangent(qOld)
 
-# Material frame
-theta = qOld[3::4] # Extract theta angles
-m1, m2 = computeMaterialDirectors(a1, a2, theta)
+    t0 = tangent[0, :]
+    arb_v = np.array([0, 0, -1])
+    a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+    if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3: # Check if t0 and arb_v are parallel
+        arb_v = np.array([0, 1, 0])
+        a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
 
-# NATURAL CURVATURE AND TWIST
+    a1, a2 = computeSpaceParallel(a1_first, qOld)
 
-# Reference twist
-refTwist = np.zeros(nv) # Or use the function we computed
+    # Material frame
+    theta = qOld[3::4] # Extract theta angles
+    m1, m2 = computeMaterialDirectors(a1, a2, theta)
 
-# Natural curvature
-kappaBar = getKappa(qOld, m1, m2)
+    # NATURAL CURVATURE AND TWIST
 
-# Natural twist
-twistBar = np.zeros(nv)
+    # Reference twist
+    refTwist = np.zeros(nv) # Or use the function we computed
 
-# Set up boundary conditions: First two nodes and first theta angle is fixed
+    # Natural curvature
+    kappaBar = getKappa(qOld, m1, m2)
 
-# Fixed and free DOFs
-fixedIndex = np.arange(0, 7)
-freeIndex = np.arange(7, ndof)
-# If we include the x and y coordinates of the last node as FIXED DOFs, we will get better agreement
+    # Natural twist
+    twistBar = np.zeros(nv)
 
-###################################################################################################
-# TIME STEPPING LOOP
+    # Set up boundary conditions: First two nodes and first theta angle is fixed
 
-Nsteps = round(totalTime / dt ) # number of steps
-ctime = 0 # Current time
-endZ_0 = qOld[-1] # End Z coordinate of the first time step
-endZ = np.zeros(Nsteps)
+    # Fixed and free DOFs
+    fixedIndex = np.arange(0, 7)
+    freeIndex = np.arange(7, ndof)
+    # If we include the x and y coordinates of the last node as FIXED DOFs, we will get better agreement
 
-a1_old = a1
-a2_old = a2
+    ###################################################################################################
+    # TIME STEPPING LOOP
 
-# Time frame for considering steady state
-track_time = 2 # seconds
-track_steps = round(track_time / dt) # Number of steps to track if steady state has occurred.
-zdiff_list =  np.zeros(track_steps)
-breakStep = Nsteps # Code will plot until breakStep, but if we reach the final time step, it will plot the whole time.
+    Nsteps = round(totalTime / dt ) # number of steps
+    ctime = 0 # Current time
+    endZ_0 = qOld[-1] # End Z coordinate of the first time step
+    endZ = np.zeros(Nsteps)
 
-# PART 1
+    a1_old = a1
+    a2_old = a2
 
-for timeStep in range(Nsteps):
+    # Time frame for considering steady state
+    track_time = 2 # seconds
+    track_steps = round(track_time / dt) # Number of steps to track if steady state has occurred.
+    zdiff_list =  np.zeros(track_steps)
+    breakStep = Nsteps # Code will plot until breakStep, but if we reach the final time step, it will plot the whole time.
 
-  q_new, u_new, a1_new, a2_new = objfun(qOld, uOld, a1_old, a2_old,
-                                        freeIndex, dt, tol, refTwist,
-                                        massVector, massMatrix,
-                                        EA, refLen,
-                                        EI, GJ, voronoiRefLen,
-                                        kappaBar, twistBar,
-                                        Fg)
-
-  # Save endZ (z coordinate of the last node)
-  endZ[timeStep] = q_new[-1] - endZ_0
-
-  satisfied = False
-
-  # Assemble a list of times to check against the current time. Used to check if steady state is reached.
-  if ctime > track_time:
-      # assemble a list of the times to check against
-      track_list = endZ[timeStep-(track_steps-1) : timeStep+1]
-
-      # Obtain a list of the percent differences of each value within the check time
-      for j, i in enumerate(track_list[1:]):
-          zdiff_list[j] = ( (i - track_list[0]) / track_list[0] )
-      # Check if all the values within the check time are within 1% of the current time
-      satisfied = True
-      for z in zdiff_list:
-          if abs(z) > 0.01:
-              satisfied = False
-      if satisfied:
-          breakStep = timeStep
-          break
+    # PART 2
 
 
 
-  ctime += dt # Current time
-  # Old parameters become new
-  qOld = q_new.copy()
-  uOld = u_new.copy()
-  a1_old = a1_new.copy()
-  a2_old = a2_new.copy()
+    for timeStep in range(Nsteps):
+      print("Timestep: ", timeStep)
+      q_new, u_new, a1_new, a2_new = objfun(qOld, uOld, a1_old, a2_old,
+                                            freeIndex, dt, tol, refTwist,
+                                            massVector, massMatrix,
+                                            EA, refLen,
+                                            EI, GJ, voronoiRefLen,
+                                            kappaBar, twistBar,
+                                            Fg)
+
+      # Save endZ (z coordinate of the last node)
+      endZ[timeStep] = q_new[-1] - endZ_0
+
+      satisfied = False
+
+      # Assemble a list of times to check against the current time. Used to check if steady state is reached.
+      if ctime > track_time:
+          # assemble a list of the times to check against
+          track_list = endZ[timeStep-(track_steps-1) : timeStep+1]
+
+          # Obtain a list of the percent differences of each value within the check time
+          for j, i in enumerate(track_list[1:]):
+              zdiff_list[j] = ( (i - track_list[0]) / track_list[0] )
+          # Check if all the values within the check time are within 1% of the current time
+          satisfied = True
+          for z in zdiff_list:
+              if abs(z) > 0.01:
+                  satisfied = False
+          if satisfied:
+              breakStep = timeStep
+              endZ_list[idx] =
+              break
+
+
+
+      ctime += dt # Current time
+      # Old parameters become new
+      qOld = q_new.copy()
+      uOld = u_new.copy()
+      a1_old = a1_new.copy()
+      a2_old = a2_new.copy()
 
