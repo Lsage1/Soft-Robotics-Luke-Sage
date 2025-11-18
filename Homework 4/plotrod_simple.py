@@ -32,9 +32,9 @@ def plotrod_simple(q, ctime):
     ax.set_title(f't={ctime:.2f}')
 
     # Set axes labels
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlabel('z')
+    ax.set_xlabel('x (m)')
+    ax.set_ylabel('y (m)')
+    ax.set_zlabel('z (m)')
 
     # Set equal scaling and a 3D view
     set_axes_equal(ax)
