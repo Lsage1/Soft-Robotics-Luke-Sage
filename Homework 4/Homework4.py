@@ -1,0 +1,8 @@
+import subprocess
+
+#Task 1: Given a characteristic force, find a steady state value.
+#subprocess.run(["python", "Task1.py"])
+
+# Task 2: Sweep over a large number of forces to determine the spring stiffness of the helix
+subprocess.run(["python", "Task2.py"])
+#subprocess.run(["python", "script3.py"])

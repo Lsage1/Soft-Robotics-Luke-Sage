@@ -25,6 +25,9 @@ def plotrod_simple(q, ctime):
     # Plot the first node with a red triangle
     ax.plot3D([x1[0]], [x2[0]], [x3[0]], 'r^')
 
+    # Plot the last node with a blue triangle
+    ax.plot3D([x1[-1]], [x2[-1]], [x3[-1]], 'b^')
+
     # Set the title with current time
     ax.set_title(f't={ctime:.2f}')
 
@@ -36,5 +39,5 @@ def plotrod_simple(q, ctime):
     # Set equal scaling and a 3D view
     set_axes_equal(ax)
     plt.draw()  # Force a redraw of the figure
-
+    #plt.savefig("plot_" + str(round(ctime)) + ".png")
     plt.show()

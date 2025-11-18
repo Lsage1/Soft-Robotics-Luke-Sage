@@ -14,9 +14,9 @@ ne = nv - 1
 ndof = 3*nv + ne
 
 # Helix parameters
-r0 = 0.002 # cross-sectional radius of the rod # Given, d = 0.002 m
+r0 = 0.001 # cross-sectional radius of the rod # Given, d = 0.002 m
 D = 0.04 # meter: helix diameter
-pitch = 2 * r0 * 10 # Pitch is the same as the cross-sectional diameter
+pitch = 2 * r0 # Pitch is the same as the cross-sectional diameter
 N = 5 # Number of turns
 # a and b are parameters used in standard (wikipedia) definition of helix
 a = D/2 # Helix radius
@@ -25,13 +25,13 @@ T = 2.0 * np.pi * N # Angle created by the helix (N turns in the center)
 L = T * np.sqrt( a**2 + b ** 2) # Arc length of the helix
 axial_l = N * pitch # Axial length
 
-print('Helix diameter = ', D)
-print('Pitch = ', pitch)
-print('N = ', N)
-print('Arc length = ', L)
+#print('Helix diameter = ', D)
+#print('Pitch = ', pitch)
+#rint('N = ', N)
+#print('Arc length = ', L)
 Estimated_Arc = np.pi * D * N
-print('Estimated arc length = ', Estimated_Arc)
-print('axial_l = ', axial_l)
+#print('Estimated arc length = ', Estimated_Arc)
+#print('axial_l = ', axial_l)
 
 # Create our nodes matrix
 nodes = np.zeros((nv, 3))
@@ -56,7 +56,7 @@ GJ = G * np.pi * r0**4 / 2.0 # Twisting stiffness
 # TIME PARAMETERS
 
 totalTime = 5.0 # seconds - total time of the simulation
-dt = 0.01 # TIme step size -- may need to be adjusted
+dt = 0.1 # TIme step size -- may need to be adjusted
 
 # Tolerance
 tol = EI / L ** 2 * 1e-3
@@ -159,15 +159,21 @@ freeIndex = np.arange(7, ndof)
 
 Nsteps = round(totalTime / dt ) # number of steps
 ctime = 0 # Current time
-endZ_0 = qOld[-1] # End Z coordinate of the first node
+endZ_0 = qOld[-1] # End Z coordinate of the first time step
 endZ = np.zeros(Nsteps)
 
 a1_old = a1
 a2_old = a2
 
-for timeStep in range(Nsteps):
+# Time frame for considering steady state
+track_time = 2 # seconds
+track_steps = round(track_time / dt) # Number of steps to track if steady state has occurred.
+zdiff_list =  np.zeros(track_steps)
+breakStep = Nsteps # Code will plot until breakStep, but if we reach the final time step, it will plot the whole time.
 
-  print('Current time: ', ctime)
+# PART 1
+
+for timeStep in range(Nsteps):
 
   q_new, u_new, a1_new, a2_new = objfun(qOld, uOld, a1_old, a2_old,
                                         freeIndex, dt, tol, refTwist,
@@ -180,7 +186,31 @@ for timeStep in range(Nsteps):
   # Save endZ (z coordinate of the last node)
   endZ[timeStep] = q_new[-1] - endZ_0
 
-  if timeStep % 100 == 0:
+  satisfied = False
+
+  # Assemble a list of times to check against the current time. Used to check if steady state is reached.
+  if ctime > track_time:
+      # assemble a list of the times to check against
+      track_list = endZ[timeStep-(track_steps-1) : timeStep+1]
+
+      # Obtain a list of the percent differences of each value within the check time
+      for j, i in enumerate(track_list[1:]):
+          zdiff_list[j] = ( (i - track_list[0]) / track_list[0] )
+      # Check if all the values within the check time are within 1% of the current time
+      satisfied = True
+      for z in zdiff_list:
+          if abs(z) > 0.01:
+              satisfied = False
+      if satisfied:
+          breakStep = timeStep
+          break
+
+  print('Current time: ', ctime, " Idx: ", timeStep, " Satisfied: ", satisfied)
+
+
+
+
+  if timeStep % 10 == 0:
     plotrod_simple(q_new, ctime)
 
   ctime += dt # Current time
@@ -192,7 +222,11 @@ for timeStep in range(Nsteps):
 
 plt.figure(2)
 time_array = np.arange(1, Nsteps+1, 1) * dt
-plt.plot(time_array, endZ, 'ro-')
+# Plot only until the convergence
+plt.plot(time_array[:breakStep], endZ[:breakStep], 'ro-')
+plt.plot(time_array[breakStep], endZ[breakStep], 'bo', label = "Steady State Value")
+
+plt.legend()
 plt.xlabel('Time (s)')
 plt.ylabel('End Z (m)')
 plt.show()
