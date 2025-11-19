@@ -13,7 +13,7 @@ print("Running Task 3")
 minDiameter = 0.01
 maxDiameter = 0.05
 
-diameterSweep = np.linspace(minDiameter, maxDiameter, 4)
+diameterSweep = np.linspace(minDiameter, maxDiameter, 10)
 stiffness_list = np.zeros(len(diameterSweep))
 
 for D_idx, D in enumerate(diameterSweep):
@@ -254,10 +254,11 @@ d = r0 * 2
 # Textbook value
 k_text = G * d ** 4 / (8 * N * diameterSweep ** 3)
 
-plt.plot(diameterSweep, k_text, 'ro-')
-plt.plot(diameterSweep, stiffness_list, 'bo-')
+plt.plot(diameterSweep, k_text, 'ro-', label = "Equation Predicted Stiffness")
+plt.plot(diameterSweep, stiffness_list, 'bo-', label = "DEM Predicted Stiffness")
 plt.xlabel("diameter (m)")
 plt.ylabel("Stiffness (N/m)")
+plt.legend()
 plt.show()
 
 
