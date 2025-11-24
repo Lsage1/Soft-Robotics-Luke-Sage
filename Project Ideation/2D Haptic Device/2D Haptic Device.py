@@ -6,10 +6,31 @@ import imageio.v2 as imageio
 from GetRestDimensions import GetRestDimensions
 from DetectJunctions import DetectJunctions
 from PlotGeometry import PlotGeometry
+from VertexObj import VertexObj, EdgeObj
 
 vertices = np.array([[0,0], [0.02,0], [.04,0], [.06, 0],[.08, 0], [.1, 0], [0.05, -0.05]])
 edgeIndex = np.array([[0,1], [1,2], [2,3], [3,4], [4,5], [5,6], [0,6], [3,6]])
 PlotGeometry(vertices, edgeIndex)
+
+vertexObjs = []
+edgeObjs = []
+
+for i in vertices:
+    vertexObjs.append(VertexObj(i[0], i[1]))
+
+for edge in edgeIndex:
+    v1 = vertexObjs[edge[0]]
+    v2 = vertexObjs[edge[1]]
+    edgeObj = EdgeObj(v1, v2)
+    edgeObjs.append(edgeObj)
+
+    v1.add_edge(edge)
+    v2.add_edge(edge)
+
+for vertex in vertexObjs:
+    print(len(vertex.edgePairs))
+exit()
+
 nv = vertices.shape[0] # number of nodes/vertices
 ndof = 2 * nv
 midNode = nv//2 + 1

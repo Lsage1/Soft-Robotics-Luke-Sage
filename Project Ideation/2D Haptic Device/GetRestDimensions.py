@@ -18,14 +18,11 @@ def GetRestDimensions(vertices, edgeIndex):
 
   for vertex, vertex_edge in enumerate(vertex_edges):
       print(vertex, vertex_edge)
+      for i in vertex_edge:
+          print(i)
 
   for i, edges in enumerate(vertex_edges):
       print(f"Vertex {i} is part of edges: {edges}")
-
-
-
-
-
 
 
   return
