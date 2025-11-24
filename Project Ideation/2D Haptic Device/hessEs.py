@@ -1,7 +1,6 @@
 import numpy as np
 
-
-def hessEs(xk, yk, xkp1, ykp1, l_k, k):
+def hessEs(xk, yk, xkp1, ykp1, l_k, EA):
     """
     This function returns the 4x4 Hessian of the stretching energy E_k^s with
     respect to x_k, y_k, x_{k+1}, and y_{k+1}.
@@ -23,6 +22,6 @@ def hessEs(xk, yk, xkp1, ykp1, l_k, k):
                    [J13, J23, J33, J34],
                    [J14, J24, J34, J44]])
 
-    J *= 0.5 * k * l_k
+    J *= 0.5 * EA * l_k
 
     return J
