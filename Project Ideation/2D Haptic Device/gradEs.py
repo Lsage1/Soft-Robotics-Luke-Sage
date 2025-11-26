@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def gradEs(xk, yk, xkp1, ykp1, l_k, k):
+def gradEs(xk, yk, xkp1, ykp1, l_k, EA):
     """
     Calculate the gradient of the stretching energy with respect to the coordinates.
 
@@ -22,7 +22,6 @@ def gradEs(xk, yk, xkp1, ykp1, l_k, k):
     F[2] = -(0.1e1 - np.sqrt((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) / l_k) * ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) ** (-0.1e1 / 0.2e1) / l_k * (0.2e1 * xkp1 - 0.2e1 * xk)
     F[3] = -(0.1e1 - np.sqrt((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) / l_k) * ((xkp1 - xk) ** 2 + (ykp1 - yk) ** 2) ** (-0.1e1 / 0.2e1) / l_k * (0.2e1 * ykp1 - 0.2e1 * yk)
 
-    F = 0.5 * k * l_k * F  # Scale by k and l_k
+    F = 0.5 * EA * l_k * F  # Scale by EA and l_k
 
     return F
-

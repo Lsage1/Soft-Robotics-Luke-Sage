@@ -50,7 +50,7 @@ totalTime = 0.5 # second
 
 # Variables related to plotting
 saveImage = 0
-plotStep = 100 # Every 5-th step will be plotted
+plotStep = 10 # Every 5-th step will be plotted
 
 ######################################################################################################
 
