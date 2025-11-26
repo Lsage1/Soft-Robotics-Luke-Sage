@@ -4,7 +4,7 @@ from hessEs import hessEs
 
 
 
-def getFs(q, EA, deltaL, vertices):
+def getFs(q, EA, edgeObjs):
   # q - DOF vector of size N
   # EA - stretching stiffness
   # deltaL - undeformed reference length (assume to be a scalar for this simple example)
@@ -18,17 +18,18 @@ def getFs(q, EA, deltaL, vertices):
   Fs = np.zeros(ndof) # stretching force
   Js = np.zeros((ndof, ndof))
 
-  for k in range(0, N-1):
-      # May need to modify if network of beams
+  for k, edge in enumerate(edgeObjs):
+      v1_index = edge.vertex1.index
+      v2_index = edge.vertex2.index
       # k-th stretching spring (USE A LOOP for the general case
-      xkm1 = q[2*k] # x coordinate of the first node
-      ykm1 = q[2*k+1] # y coordinate of the first node
-      xk = q[2*k+2] # x coordinate of the second node
-      yk = q[2*k+3] # y coordinate of the second node
+      xkm1 = q[2*v1_index] # x coordinate of the first node
+      ykm1 = q[2*v1_index+1] # y coordinate of the first node
+      xk = q[2*v2_index] # x coordinate of the second node
+      yk = q[2*v2_index+1] # y coordinate of the second node
 
-      rest_length = np.linalg.norm(vertices[k+1] - vertices[k])
+      rest_length = edge.rest_length
 
-      ind = np.arange(2*k, 2*k+4) # 0, 1, 2, 3 for k = 0
+      ind = np.array([2*v1_index, 2*v1_index+1, 2*v2_index, 2*v2_index+1]) # 0, 1, 2, 3 for k = 0
       gradEnergy = gradEs(xkm1, ykm1, xk, yk, rest_length, EA)
       hessEnergy = hessEs(xkm1, ykm1, xk, yk, rest_length, EA)
 

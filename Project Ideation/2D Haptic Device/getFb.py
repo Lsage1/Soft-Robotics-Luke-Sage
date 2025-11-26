@@ -7,7 +7,7 @@ import numpy as np
 from gradEb import gradEb
 from hessEb import hessEb
 
-def getFb(q, EI, deltaL, vertices):
+def getFb(q, EI, vertexObjs, edgeObjs):
   # q - DOF vector of size N
   # EI - bending stiffness
   # deltaL - undeformed Voronoi length (assume to be a scalar for this simple example)
@@ -22,40 +22,39 @@ def getFb(q, EI, deltaL, vertices):
   Jb = np.zeros((ndof, ndof))
 
   # First bending spring (USE A LOOP for the general case)
-  for k in range(1, N-1):
-    xkm1 = q[2*k-2] # x coordinate of the first node
-    ykm1 = q[2*k-1] # y coordinate of the first node
-    xk = q[2*k] # x coordinate of the second node
-    yk = q[2*k+1] # y coordinate of the second node
-    xkp1 = q[2*k+2] # x coordinate of the third node
-    ykp1 = q[2*k+3] # y coordinate of the third node
-    ind = np.arange(2*k-2, 2*k+4)
+  for k, vertex in enumerate(vertexObjs):
+    for e, edgePair in enumerate(vertex.edgePairs):
+        prev_vertex = edgePair[0].get_other_vertex(vertex)
+        next_vertex = edgePair[1].get_other_vertex(vertex)
 
-    # Rest Geometries from vertices:
-    vkm1 = vertices[k-1]
-    vk = vertices[k]
-    vkp1 = vertices[k+1]
+        # Get current, next, and previous index based on vertex
+        cind = vertex.index
+        pind = prev_vertex.index
+        nind = next_vertex.index
 
-    # Get rest edges
-    e1_rest = vkm1 - vk
-    e2_rest = vkp1 - vk
+        xkm1 = q[2*pind] # x coordinate of the first node
+        ykm1 = q[2*pind+1] # y coordinate of the first node
+        xk = q[2*cind] # x coordinate of the second node
+        yk = q[2*cind+1] # y coordinate of the second node
+        xkp1 = q[2*nind] # x coordinate of the third node
+        ykp1 = q[2*nind+1] # y coordinate of the third node
 
-    # Get Rest angle
-    dotprod = np.dot(e1_rest, e2_rest)
-    n1 = np.linalg.norm(e1_rest)
-    n2 = np.linalg.norm(e2_rest)
-    #cos_theta = np.clip(dotprod / (n1*n2), -1, 1) # Make sure nothing out of range -1, 1
-    rest_angle = np.atan2(np.cross(e1_rest, e2_rest), dotprod)
+        ind = np.array([2*pind, 2*pind+1, 2*cind, 2*cind+1, 2*nind, 2*nind+1])
 
-    # Get rest voronoi length
-    lkm1 = np.linalg.norm(vk-vkm1)
-    lk = np.linalg.norm(vkp1-vk)
-    rest_deltaL = 0.5 * (lkm1 + lk)
+        # Calculate rest voronoi lengths
+        rest_voronoi_L = edgePair[0].rest_length + edgePair[1].rest_length
 
-    gradEnergy = gradEb(xkm1, ykm1, xk, yk, xkp1, ykp1, 0, rest_deltaL, EI)
-    hessEnergy = hessEb(xkm1, ykm1, xk, yk, xkp1, ykp1, 0, rest_deltaL, EI)
 
-    Fb[ind] -= gradEnergy # force = - gradient of energy. Fb is the stretching force
-    Jb[np.ix_(ind, ind)] -= hessEnergy # index vector: 0:6
+        # Bending force scaled between edge pairs reduced if a junction exists
+        junctionFactor = 1 / len(vertex.edgePairs)
+
+        # edge pair rest bending angle (index of edge pair is the same as index of rest angles stored)
+        curvature0 = vertex.rest_angles[e]
+
+        gradEnergy = gradEb(xkm1, ykm1, xk, yk, xkp1, ykp1, curvature0, rest_voronoi_L, EI)
+        hessEnergy = hessEb(xkm1, ykm1, xk, yk, xkp1, ykp1, curvature0, rest_voronoi_L, EI)
+
+        Fb[ind] -= gradEnergy * junctionFactor # force = - gradient of energy. Fb is the stretching force
+        Jb[np.ix_(ind, ind)] -= hessEnergy * junctionFactor# index vector: 0:6
 
   return Fb, Jb

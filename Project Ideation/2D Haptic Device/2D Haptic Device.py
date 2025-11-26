@@ -10,13 +10,14 @@ from VertexObj import VertexObj, EdgeObj
 
 vertices = np.array([[0,0], [0.02,0], [.04,0], [.06, 0],[.08, 0], [.1, 0], [0.05, -0.05]])
 edgeIndex = np.array([[0,1], [1,2], [2,3], [3,4], [4,5], [5,6], [0,6], [3,6]])
-PlotGeometry(vertices, edgeIndex)
 
 vertexObjs = []
 edgeObjs = []
 
-for i in vertices:
-    vertexObjs.append(VertexObj(i[0], i[1]))
+for index, vert in enumerate(vertices):
+    vertexObjs.append(VertexObj(vert[0], vert[1], index))
+
+
 
 for edge in edgeIndex:
     v1 = vertexObjs[edge[0]]
@@ -24,16 +25,45 @@ for edge in edgeIndex:
     edgeObj = EdgeObj(v1, v2)
     edgeObjs.append(edgeObj)
 
-    v1.add_edge(edge)
-    v2.add_edge(edge)
+    v1.add_edge(edgeObj)
+    v2.add_edge(edgeObj)
 
+print("BREAK")
+
+# Get rest angles for each vertex
 for vertex in vertexObjs:
-    print(len(vertex.edgePairs))
-exit()
+    for edgePair in vertex.edgePairs:
+        edge1 = edgePair[0]
+        edge2 = edgePair[1]
+        vertex_nm1 = edge1.get_other_vertex(vertex)
+        vertex_np1 = edge2.get_other_vertex(vertex)
+        # Get edge vectors
 
-nv = vertices.shape[0] # number of nodes/vertices
+        BA = np.array(vertex_nm1.rest_coords) - np.array(vertex.rest_coords)
+        BC = np.array(vertex_np1.rest_coords) - np.array(vertex.rest_coords)
+
+        # Normalize (not required)
+        BA_norm = BA / np.linalg.norm(BA)
+        BC_norm = BC / np.linalg.norm(BC)
+
+        # Dot and 2D cross product
+        dot = np.dot(BA_norm, BC_norm)
+        cross = BA_norm[0]*BC_norm[1] - BA_norm[1]*BC_norm[0]
+
+        # Calculate signed Angle
+        angle = np.arctan2(cross, dot)
+        vertex.rest_angles.append(angle)
+
+# Calculate the rest length of each edge.
+for edge in edgeObjs:
+    v1 = np.array(edge.vertex1.rest_coords)
+    v2 = np.array(edge.vertex2.rest_coords)
+    restLength = np.linalg.norm([v2-v1])
+    print(v1, v2, "REST LENGTH", restLength)
+    edge.rest_length = restLength
+
+nv = len(vertexObjs) # number of nodes/vertices
 ndof = 2 * nv
-midNode = nv//2 + 1
 
 # Time step
 dt = 0.01 # second
@@ -48,7 +78,6 @@ deltaL = RodLength / (nv - 1)   #   CHANGE
 R = np.zeros(nv)
 for k in range(nv):
   R[k] = deltaL/10 # meter
-R[midNode-1] = 0.025 # meter
 
 # Densities
 rho_metal = 1100 # kg/m^3
@@ -68,7 +97,7 @@ visc = 1000.0 # Pa-s
 maximum_iter = 1000
 
 # Total time
-totalTime = 1 # second
+totalTime = 10 # second
 
 # Variables related to plotting
 saveImage = 0
@@ -100,26 +129,21 @@ for k in range(0, nv):
 
 # Viscous damping (external force) *** NO VISCOUS DAMPING
 C = np.zeros((2 * nv, 2 * nv))
-#for k in range(0, nv):
-#  C[2*k, 2*k] = 6.0 * np.pi * visc * R[k] # Damping along x for k-th node
-#  C[2*k+1, 2*k+1] = 6.0 * np.pi * visc * R[k] # Damping along y for k-th node
+for k in range(0, nv):
+  C[2*k, 2*k] = 6.0 * np.pi * visc * R[k] # Damping along x for k-th node
+  C[2*k+1, 2*k+1] = 6.0 * np.pi * visc * R[k] # Damping along y for k-th node
 
 # Initial conditions
 q0 = np.zeros(2 * nv)
 
-for c in range(nv):
-  q0[2*c] = vertices[c, 0] # x coordinate
-  q0[2*c+1] = vertices[c, 1] # y coordinate
 
-junctions = DetectJunctions(vertices, edgeIndex)
-print("Junctions:", junctions)
-
-GetRestDimensions(vertices, edgeIndex)
-
+for c, vertex in enumerate(vertexObjs):
+  q0[2*c] = vertex.rest_coords[0]
+  q0[2*c+1] = vertex.rest_coords[1]
 
 u0 = np.zeros(2 * nv) # old velocity
 
-exit()
+
 
 ##### BOUNDARY CONDITIONS
 
@@ -150,11 +174,12 @@ image_folder = "images"
 os.makedirs(image_folder, exist_ok=True)
 frame_files = []
 
+
 # Loop over the time steps
 for timeStep in range(1,Nsteps):
   print(timeStep)
   q_new, error = objfun(q0, u0, dt, tol, maximum_iter, m, mMat, EI, EA, W, C,
-                        deltaL, free_index, vertices)
+                        vertexObjs, edgeObjs, free_index)
   if error < 0:
     print('Could not converge.')
     break
@@ -164,12 +189,7 @@ for timeStep in range(1,Nsteps):
 
   ctime += dt # Update current time
 
-  # Save information about the middle node
-  all_pos[timeStep] = q_new[2*midNode-1] # y coordinate of middle node
-  all_vel[timeStep] = u_new[2*midNode-1] # y velocity of middle node
-  vec1 = np.array( [ q_new[2*midNode-2], q_new[2*midNode-1], 0 ] ) - np.array( [ q_new[2*midNode-4], q_new[2*midNode-3], 0 ] ) # Second node - First node
-  vec2 = np.array( [ q_new[2*midNode], q_new[2*midNode+1], 0 ] ) - np.array( [ q_new[2*midNode-2], q_new[2*midNode-1], 0 ] ) # Third node - Second node
-  mid_angle[timeStep] =  np.degrees( np.arctan2(np.linalg.norm( np.cross(vec1, vec2)), np.dot(vec1, vec2)) )
+
 
   q0 = q_new.copy() # New position becomes old position
   u0 = u_new.copy() # New velocity becomes old velocity
@@ -181,17 +201,16 @@ for timeStep in range(1,Nsteps):
     y_arr = q_new[1::2] # q[1], q[3], q[5]
 
     h1 = plt.figure(1)
-    plt.clf() # Clear current figure
-    plt.plot(x_arr, y_arr, 'ko-')
+
+    PlotGeometry(q0, edgeIndex)
     plt.title(f't={ctime:.4f}s')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.axis('equal')
+
 
     # Save frame as image
     frame_path = os.path.join(image_folder, f"frame_{timeStep:05d}.png")
     plt.savefig(frame_path, dpi=150)
     frame_files.append(frame_path)
+    plt.close()
 
 # --- Assemble video from saved frames ---
 video_path = "simulation.mp4"

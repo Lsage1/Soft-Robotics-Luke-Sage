@@ -8,9 +8,9 @@ def objfun(q_old, u_old, dt, tol, maximum_iter,
            m, mMat, # inertia
            EI, EA, # elastic stiffness
            W, C, # external force
-           deltaL,
+           vertexObjs, edgeObjs,
            free_index,
-           vertices):
+           ):
 
   q_new = q_old.copy() # Guess solution
 
@@ -25,8 +25,8 @@ def objfun(q_old, u_old, dt, tol, maximum_iter,
     J_inertia = mMat / dt ** 2
 
     # Elastic forces: Stretching and Bending
-    Fs, Js = getFs(q_new, EA, deltaL, vertices)
-    Fb, Jb = getFb(q_new, EI, deltaL, vertices)
+    Fs, Js = getFs(q_new, EA, edgeObjs)
+    Fb, Jb = getFb(q_new, EI, vertexObjs, edgeObjs)
     F_elastic = Fs + Fb
     J_elastic = Js + Jb
 
