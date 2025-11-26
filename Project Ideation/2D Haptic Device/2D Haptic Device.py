@@ -9,7 +9,7 @@ from PlotGeometry import PlotGeometry
 from VertexObj import VertexObj, EdgeObj
 
 vertices = np.array([[0,0], [0.02,0], [.04,0], [.06, 0],[.08, 0], [.1, 0], [0.05, -0.05]])
-edgeIndex = np.array([[0,1], [1,2], [2,3], [3,4], [4,5], [5,6], [0,6], [3,6]])
+edgeIndex = np.array([[0,1], [1,2], [2,3], [3,4], [4,5], [5,6], [0,6], [3,6], [4,6]])
 
 vertexObjs = []
 edgeObjs = []
@@ -97,7 +97,7 @@ visc = 1000.0 # Pa-s
 maximum_iter = 1000
 
 # Total time
-totalTime = 10 # second
+totalTime = 5 # second
 
 # Variables related to plotting
 saveImage = 0
