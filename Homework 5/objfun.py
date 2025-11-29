@@ -14,7 +14,6 @@ def objfun(qOld, uOld, freeIndex, dt, tol, massVector, massMatrix,
   error = 10 * tol
   # Newton Raphson
   while error > tol:
-
     # Bending force and jacobian
     Fb = np.zeros( ndof )
     Jb = np.zeros( (ndof,ndof) )
@@ -32,7 +31,7 @@ def objfun(qOld, uOld, freeIndex, dt, tol, massVector, massMatrix,
              3*node1, 3*node1 + 1, 3*node1 + 2,
              3*node2, 3*node2 + 1, 3*node2 + 2,
              3*node3, 3*node3 + 1, 3*node3 + 2]
-      dF, dJ = gradEb_hessEb_Shell(x0, x1, x2, x3, 0, kb)
+      dF, dJ = gradEb_hessEb_Shell(x0, x1, x2, x3, thetaBar[kHinge], kb)
       Fb[ind] -= dF
       Jb[np.ix_(ind,ind)] -= dJ
 

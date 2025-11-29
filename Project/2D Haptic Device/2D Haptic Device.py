@@ -59,7 +59,7 @@ for edge in edgeObjs:
     v1 = np.array(edge.vertex1.rest_coords)
     v2 = np.array(edge.vertex2.rest_coords)
     restLength = np.linalg.norm([v2-v1])
-    print(v1, v2, "REST LENGTH", restLength)
+    #print(v1, v2, "REST LENGTH", restLength)
     edge.rest_length = restLength
 
 nv = len(vertexObjs) # number of nodes/vertices
@@ -105,7 +105,7 @@ plotStep = 5 # Every 5-th step will be plotted
 
 ##### UTILITY QUANTITIES
 
-# Utility quantites
+# Utility quantities
 EI = Y * np.pi * r0**4 / 4
 EA = Y * np.pi * r0**2
 
@@ -141,6 +141,7 @@ for c, vertex in enumerate(vertexObjs):
   q0[2*c] = vertex.rest_coords[0]
   q0[2*c+1] = vertex.rest_coords[1]
 
+print(q0)
 u0 = np.zeros(2 * nv) # old velocity
 
 
