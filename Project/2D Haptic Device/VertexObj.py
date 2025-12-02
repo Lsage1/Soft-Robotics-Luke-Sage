@@ -8,6 +8,7 @@ class VertexObj:
         self.edgePairs = []
         self.rest_angles = []
 
+
     def get_attached_vertex(self):
         attached_verts = []
         for edge in self.edges:
