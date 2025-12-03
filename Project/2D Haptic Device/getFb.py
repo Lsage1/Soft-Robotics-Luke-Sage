@@ -41,12 +41,12 @@ def getFb(q, EI, vertexObjs, edgeObjs):
 
         ind = np.array([2*pind, 2*pind+1, 2*cind, 2*cind+1, 2*nind, 2*nind+1])
 
-        # Calculate rest voronoi lengths
-        rest_voronoi_L = edgePair[0].rest_length + edgePair[1].rest_length
+        # retrieve rest voronoi lengths
+        rest_voronoi_L = (edgePair[0].rest_length + edgePair[1].rest_length)/2
 
 
-        # Bending force scaled between edge pairs reduced if a junction exists
-        junctionFactor = 1 / len(vertex.edgePairs)
+        # Bending force scaled between edge pairs reduced if a junction exists NOTE Currently not scaled
+        junctionFactor = 1 #/ len(vertex.edgePairs)
 
         # edge pair rest bending angle (index of edge pair is the same as index of rest angles stored)
         curvature0 = vertex.rest_angles[e]
