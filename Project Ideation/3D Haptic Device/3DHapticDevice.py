@@ -8,19 +8,80 @@ from getKappa import getKappa
 from objfun import objfun
 from computeKappa import computeKappa
 from PlotRodNetwork import PlotRodNetwork
+from GeometryObjects import EdgeObj
+from GeometryObjects import VertexObj
 
 print("Running Task 1")
 
-vertices = np.array([[0,0,0], [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0], [0,0.1,0.05], [0.1,0,0.05], [0,-0.1,0.05], [-0.1, 0,0.05]])
+vertices = np.array([[0,0,0], [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0], [0,0.1,-0.05], [0.1,0,-0.05], [0,-0.1,-0.05], [-0.1, 0,-0.05]])
 edges = np.array([[0,1], [0,2], [0,3], [0,4], [1,5], [2,6], [3,7], [4,8]])
 
 # Inputs
-nv = 50 # number of nodes
-ne = nv - 1
+nv = len(vertices) # number of nodes
+ne = len(edges)
 ndof = 3*nv + ne
 
-PlotRodNetwork(vertices, edges)
-quit()
+vertexObjs = []
+edgeObjs = []
+
+# Create a list of vertex objects, and create a vertex object for each coordinate set
+for index, vert in enumerate(vertices):
+    vertexObjs.append(VertexObj(vert[0], vert[1], vert[2], index))
+
+# Store a list of edge objects
+for edge in edges:
+    v1 = vertexObjs[edge[0]] # Get the vertex object associated with the index retrieved
+    v2 = vertexObjs[edge[1]]
+    edgeObj = EdgeObj(v1, v2) # Create a new edge object with the two vertices that define it
+    edgeObjs.append(edgeObj) # Add new edge to the list of vertexes
+
+    # For both vertexes making up the edge, add a reference to the edge
+    v1.add_edge(edgeObj)
+    v2.add_edge(edgeObj)
+
+# Get rest angles for each vertex
+for vertex in vertexObjs:
+    for edgePair in vertex.edgePairs:
+        edge1 = edgePair[0]
+        edge2 = edgePair[1]
+        vertex_nm1 = edge1.get_other_vertex(vertex)
+        vertex_np1 = edge2.get_other_vertex(vertex)
+        # Get edge vectors
+
+        BA = -np.array(vertex_nm1.rest_coords) + np.array(vertex.rest_coords)
+        BC = np.array(vertex_np1.rest_coords) - np.array(vertex.rest_coords)
+
+        # Normalize (not required)
+        BA_norm = BA / np.linalg.norm(BA)
+        BC_norm = BC / np.linalg.norm(BC)
+
+        # Dot and cross product
+        dot = np.dot(BA_norm, BC_norm)
+        cross = np.cross(BA_norm, BC_norm)
+
+        # Calculate signed Angle
+        angle = np.arctan2(cross, dot)
+        vertex.rest_angles.append(angle)
+
+    if len(vertex.edgePairs) > 1:
+        vertex.junction = True
+    if len(vertex.edgePairs) == 0:
+        vertex.end = True
+
+
+
+# Calculate the rest length of each edge.
+for edge in edgeObjs:
+    v1 = np.array(edge.vertex1.rest_coords)
+    v2 = np.array(edge.vertex2.rest_coords)
+    restLength = np.linalg.norm(v2-v1)
+    edge.rest_length = restLength
+
+# Calculate Voronoi Length for each edge pair
+for vertex in vertexObjs:
+    for i, edgePair in enumerate(vertex.edgePairs):
+        vertex.voronoiLength =
+
 
 # Helix parameters
 r0 = 0.001 # cross-sectional radius of the rod # Given, d = 0.002 m
@@ -34,21 +95,11 @@ T = 2.0 * np.pi * N # Angle created by the helix (N turns in the center)
 L = T * np.sqrt( a**2 + b ** 2) # Arc length of the helix
 axial_l = N * pitch # Axial length
 
-#print('Helix diameter = ', D)
-#print('Pitch = ', pitch)
-#rint('N = ', N)
-#print('Arc length = ', L)
-Estimated_Arc = np.pi * D * N
-#print('Estimated arc length = ', Estimated_Arc)
-#print('axial_l = ', axial_l)
 
-# Create our nodes matrix
-nodes = np.zeros((nv, 3))
-for c in range(nv):
-  t = c * T / (nv - 1.0)
-  nodes[c,0] = a * np.cos(t)
-  nodes[c,1] = a * np.sin(t)
-  nodes[c,2] = - b * t
+Estimated_Arc = np.pi * D * N
+
+
+nodes = vertices ### CHANGE LATER
 
 # ELASTIC STIFFNESS
 
@@ -64,11 +115,11 @@ GJ = G * np.pi * r0**4 / 2.0 # Twisting stiffness
 
 # TIME PARAMETERS
 
-totalTime = 5.0 # seconds - total time of the simulation
-dt = 0.1 # TIme step size -- may need to be adjusted
+totalTime = 1 # seconds - total time of the simulation
+dt = 0.01 # TIme step size -- may need to be adjusted
 
 # Tolerance
-tol = EI / L ** 2 * 1e-3
+tol = EI / L ** 2 * 1e-3  ######################################## CHANGE
 
 # MASS VECTORS AND MATRIX
 
@@ -92,11 +143,11 @@ massMatrix = np.diag(massVector)
 
 # External Force: Point load on the last node (instead of gravity)
 
-F_end = EI / L ** 2
+F_end = 0.1 # CHANGE LATER
 vectorLoad = np.array([0, 0, -F_end]) # Point load vector
 
-Fg = np.zeros(ndof) # Eexternal force vector
-c = nv-1
+Fg = np.zeros(ndof) # External force vector
+c = nv-1 # node at which to apply the load
 ind = [4*c, 4*c + 1, 4*c + 2] # last node
 Fg[ind] += vectorLoad
 
@@ -107,12 +158,14 @@ for c in range(nv):
   ind = [4*c, 4*c + 1, 4*c + 2] # c-th node
   qOld[ind] = nodes[c, :]
 
+
 uOld = np.zeros_like(qOld) # Velocity is zero initially
 
-plotrod_simple(qOld, 0)
+PlotRodNetwork(q0, edges)
 
 # COMPUTE THE REFERENCE LENGTHS:
 
+#######################################################################################
 # Reference length of each edge
 refLen = np.zeros(ne)
 for c in range(ne):
