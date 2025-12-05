@@ -10,8 +10,8 @@ from computeKappa import computeKappa
 from PlotRodNetwork import PlotRodNetwork
 from GeometryObjects import EdgeObj
 from GeometryObjects import VertexObj
+from ComputeTangentEdges import ComputeTangentEdges
 
-print("Running Task 1")
 
 vertices = np.array([[0,0,0], [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0], [0,0.1,-0.05], [0.1,0,-0.05], [0,-0.1,-0.05], [-0.1, 0,-0.05]])
 edges = np.array([[0,1], [0,2], [0,3], [0,4], [1,5], [2,6], [3,7], [4,8]])
@@ -64,10 +64,16 @@ for vertex in vertexObjs:
         angle = np.arctan2(cross, dot)
         vertex.rest_angles.append(angle)
 
+    # Detect Junctions and Rod Ends
     if len(vertex.edgePairs) > 1:
         vertex.junction = True
     if len(vertex.edgePairs) == 0:
         vertex.end = True
+
+    # Initialize vertex coordinates at same location as rest coordinates
+    vertex.coords = vertex.rest_coords
+
+
 
 
 
@@ -83,23 +89,7 @@ for vertex in vertexObjs:
     for i, edgePair in enumerate(vertex.edgePairs):
         vertex.voronoi_length.append((edgePair[0].rest_length + edgePair[1].rest_length) / 2)
 
-
-
-# Helix parameters
-r0 = 0.001 # cross-sectional radius of the rod # Given, d = 0.002 m
-D = 0.04 # meter: helix diameter
-pitch = 2 * r0 # Pitch is the same as the cross-sectional diameter
-N = 5 # Number of turns
-# a and b are parameters used in standard (wikipedia) definition of helix
-a = D/2 # Helix radius
-b = pitch / (2.0 * np.pi)
-T = 2.0 * np.pi * N # Angle created by the helix (N turns in the center)
-L = T * np.sqrt( a**2 + b ** 2) # Arc length of the helix
-axial_l = N * pitch # Axial length
-
-
-Estimated_Arc = np.pi * D * N
-
+r0 = 0.0015 # rest radius
 
 nodes = vertices ### CHANGE LATER
 
@@ -126,7 +116,8 @@ tol = EI / 0.1 ** 2 * 1e-3  ######################################## CHANGE
 # MASS VECTORS AND MATRIX
 
 rho = 1200 # kg/m^3 -- density
-totalM = L * np.pi * r0**2 * rho  # Total mass of the rod
+# CHANGE TOTAL LENGTH LATER *********************************************
+totalM = 0.05*8 * np.pi * r0**2 * rho  # Total mass of the rod
 dm = totalM / ne
 
 massVector = np.zeros(ndof_tr)
@@ -166,27 +157,34 @@ for c in range(nv):
 uOld_tr = np.zeros_like(qOld_tr) # Velocity is zero initially
 # Note: rotational (along edge axis) inertia is not tracked
 
+PlotRodNetwork(vertices, edges)
 
 # COMPUTE THE FRAMES
-
 # Reference frame (At t=0, we initialize it with space parallel reference frame but not mandatory)
-tangent = computeTangent(qOld_tr)
+
+# Call function to calculate tangent vector for each edge object
+ComputeTangentEdges(edgeObjs)
+
+# tangent = computeTangent(qOld_tr)
+
 
 # NOTE:  For each "Start point" do this. Calculate a reference vector, considered the origin of no rotation
 print(len(qOld_tr), "Translational Degrees of Freedom")
 print(len(qOld_rot), "Rotational Degrees of Freedom")
 for vertex in vertexObjs:
     if vertex.end == True:
-        t0 = tangent[vertex.index, :]
-        print(t0)
+        end_edge = vertex.edges[0] # This vertex is an end, so it has one edge, which will be the first in its list
+        t0 = end_edge.tangent
+
+        # Now iterate over edges until
         # Maybe save the q0
         # At the end node, create a reference vector.
-        arb_v = np.array([0, 0, -1])
-        a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+        #arb_v = np.array([0, 0, -1])
+        #a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
 
-        if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3: # Check if t0 and arb_v are parallel
-          arb_v = np.array([0, 1, 0])
-          a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+        #if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3: # Check if t0 and arb_v are parallel
+        #  arb_v = np.array([0, 1, 0])
+        #  a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
 
         # NOTE: Need to generate a vector of q_segment that follows each END to a JUNCTION or END
         #getQSegment(vertex, vertexObjs, edgeObjs)

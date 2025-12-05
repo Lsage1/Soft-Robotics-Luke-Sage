@@ -10,6 +10,7 @@ class VertexObj:
         self.junction = False
         self.end = False
         self.voronoi_length = []
+        self.coords = (x,y,z)
 
 
     def get_attached_vertex(self):
@@ -32,6 +33,7 @@ class EdgeObj:
         self.vertex1 = v1
         self.vertex2 = v2
         self.rest_length = 0
+        self.tangent = []
 
     def get_other_vertex(self, vertex):
         if self.vertex1 == vertex:
