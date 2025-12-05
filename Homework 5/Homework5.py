@@ -211,10 +211,12 @@ x_sweep = np.linspace(0, 0.1, 8)
 for index, x in enumerate(x_sweep):
     deltaEB[index] = q * 4 / (24 * Y * I) * (x**4 - 4*length*x**3 + 6*length**2*x**2)
 
-plt.plot(x_sweep, deltaEB)
+plt.xlabel("x (m)")
+plt.ylabel("y (m)")
+plt.plot(x_sweep, deltaEB, "bo-", label="Euler-Bernoulli Beam Theory")
 points = qNew.reshape(-1, 3)  # N×3 array
 xs = points[:, 0][:10]
 zs = points[:, 2][:10]
-plt.plot(xs, zs, 'ro-')
+plt.plot(xs, zs, 'ro-',  label="Discrete Shell Simulation")
 plt.show()
 

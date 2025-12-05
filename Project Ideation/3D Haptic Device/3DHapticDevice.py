@@ -19,7 +19,8 @@ edges = np.array([[0,1], [0,2], [0,3], [0,4], [1,5], [2,6], [3,7], [4,8]])
 # Inputs
 nv = len(vertices) # number of nodes
 ne = len(edges)
-ndof = 3*nv + ne
+ndof_tr = 3*nv # translational degrees of freedom
+ndof_rot = ne # rotational degrees of freedom
 
 vertexObjs = []
 edgeObjs = []
@@ -80,7 +81,8 @@ for edge in edgeObjs:
 # Calculate Voronoi Length for each edge pair
 for vertex in vertexObjs:
     for i, edgePair in enumerate(vertex.edgePairs):
-        vertex.voronoiLength =
+        vertex.voronoi_length.append((edgePair[0].rest_length + edgePair[1].rest_length) / 2)
+
 
 
 # Helix parameters
@@ -104,8 +106,8 @@ nodes = vertices ### CHANGE LATER
 # ELASTIC STIFFNESS
 
 # Material Parameters
-Y = 10e6 # 10 MPa - Young's modulus
-nu = 0.5 # Poisson's ration
+Y = 7e7 # 10 MPa - Young's modulus
+nu = 0.5 # Poisson's ration. Standard for elastomers
 G = Y / ( 2 * (1 + nu)) # Shear modulus
 
 # Stiffness variables
@@ -119,80 +121,80 @@ totalTime = 1 # seconds - total time of the simulation
 dt = 0.01 # TIme step size -- may need to be adjusted
 
 # Tolerance
-tol = EI / L ** 2 * 1e-3  ######################################## CHANGE
+tol = EI / 0.1 ** 2 * 1e-3  ######################################## CHANGE
 
 # MASS VECTORS AND MATRIX
 
-rho = 1000 # kg/m^3 -- density
+rho = 1200 # kg/m^3 -- density
 totalM = L * np.pi * r0**2 * rho  # Total mass of the rod
 dm = totalM / ne
 
-massVector = np.zeros(ndof)
+massVector = np.zeros(ndof_tr)
 for c in range(nv):
-  ind = [4*c, 4*c+1, 4*c+2] # x, y, z coordinates of c-th node
+  ind = [3*c, 3*c+1, 3*c+2] # x, y, z coordinates of c-th node
   if c == 0 or c == nv - 1:
     massVector[ind] = dm / 2
   else:
     massVector[ind] = dm
 
 for c in range(ne):
-  massVector[4*c+3] = 0.5 * dm * r0 ** 2 # Equation for a solid cylinder
+  massVector[3*c+3] = 0.5 * dm * r0 ** 2 # Equation for a solid cylinder
   # Because r0 is really small, we may get away with just using 0 angular mass
 
 massMatrix = np.diag(massVector)
 
+
 # External Force: Point load on the last node (instead of gravity)
 
-F_end = 0.1 # CHANGE LATER
+F_end = 0.0 # CHANGE LATER
 vectorLoad = np.array([0, 0, -F_end]) # Point load vector
 
-Fg = np.zeros(ndof) # External force vector
-c = nv-1 # node at which to apply the load
-ind = [4*c, 4*c + 1, 4*c + 2] # last node
+Fg = np.zeros(ndof_tr) # External force vector
+c = 0 # node at which to apply the load
+ind = [3*c, 3*c + 1, 3*c + 2] # last node
 Fg[ind] += vectorLoad
 
 # INITIAL DOF VECTOR
 
-qOld = np.zeros(ndof)
+qOld_tr = np.zeros(ndof_tr)
+qOld_rot = np.zeros(ndof_rot)
 for c in range(nv):
-  ind = [4*c, 4*c + 1, 4*c + 2] # c-th node
-  qOld[ind] = nodes[c, :]
+  ind = [3*c, 3*c + 1, 3*c + 2] # c-th node
+  qOld_tr[ind] = nodes[c, :]
 
 
-uOld = np.zeros_like(qOld) # Velocity is zero initially
+uOld_tr = np.zeros_like(qOld_tr) # Velocity is zero initially
+# Note: rotational (along edge axis) inertia is not tracked
 
-PlotRodNetwork(q0, edges)
-
-# COMPUTE THE REFERENCE LENGTHS:
-
-#######################################################################################
-# Reference length of each edge
-refLen = np.zeros(ne)
-for c in range(ne):
-  refLen[c] = np.linalg.norm(nodes[c + 1, :] - nodes[c, :])
-
-voronoiRefLen = np.zeros(nv)
-for c in range(nv):
-  if c == 0:
-    voronoiRefLen[c] = 0.5 * refLen[c]
-  elif c == nv - 1:
-    voronoiRefLen[c] = 0.5 * refLen[c - 1]
-  else:
-    voronoiRefLen[c] = 0.5 * (refLen[c - 1] + refLen[c])
 
 # COMPUTE THE FRAMES
 
 # Reference frame (At t=0, we initialize it with space parallel reference frame but not mandatory)
-tangent = computeTangent(qOld)
+tangent = computeTangent(qOld_tr)
 
-t0 = tangent[0, :]
-arb_v = np.array([0, 0, -1])
-a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
-if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3: # Check if t0 and arb_v are parallel
-  arb_v = np.array([0, 1, 0])
-  a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+# NOTE:  For each "Start point" do this. Calculate a reference vector, considered the origin of no rotation
+print(len(qOld_tr), "Translational Degrees of Freedom")
+print(len(qOld_rot), "Rotational Degrees of Freedom")
+for vertex in vertexObjs:
+    if vertex.end == True:
+        t0 = tangent[vertex.index, :]
+        print(t0)
+        # Maybe save the q0
+        # At the end node, create a reference vector.
+        arb_v = np.array([0, 0, -1])
+        a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
 
-a1, a2 = computeSpaceParallel(a1_first, qOld)
+        if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3: # Check if t0 and arb_v are parallel
+          arb_v = np.array([0, 1, 0])
+          a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+
+        # NOTE: Need to generate a vector of q_segment that follows each END to a JUNCTION or END
+        #getQSegment(vertex, vertexObjs, edgeObjs)
+
+        # q_segment will need to be passed. computeSpaceParallel will need to be changed not have 4 inputs
+        #a1, a2 = computeSpaceParallel(a1_first, q_segment)
+
+quit()
 
 # Material frame
 theta = qOld[3::4] # Extract theta angles

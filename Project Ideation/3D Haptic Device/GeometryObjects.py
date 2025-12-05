@@ -9,6 +9,7 @@ class VertexObj:
         self.rest_angles = []
         self.junction = False
         self.end = False
+        self.voronoi_length = []
 
 
     def get_attached_vertex(self):
