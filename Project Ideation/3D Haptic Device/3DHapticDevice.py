@@ -11,6 +11,7 @@ from PlotRodNetwork import PlotRodNetwork
 from GeometryObjects import EdgeObj
 from GeometryObjects import VertexObj
 from ComputeTangentEdges import ComputeTangentEdges
+from computeSpaceParallel_OO import computeSpaceParallel_OO
 
 
 vertices = np.array([[0,0,0], [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0], [0,0.1,-0.05], [0.1,0,-0.05], [0,-0.1,-0.05], [-0.1, 0,-0.05]])
@@ -33,7 +34,7 @@ for index, vert in enumerate(vertices):
 for edge in edges:
     v1 = vertexObjs[edge[0]] # Get the vertex object associated with the index retrieved
     v2 = vertexObjs[edge[1]]
-    edgeObj = EdgeObj(v1, v2) # Create a new edge object with the two vertices that define it
+    edgeObj = EdgeObj(v1, v2, 0) # Create a new edge object with the two vertices that define it. For now, Theta = 0
     edgeObjs.append(edgeObj) # Add new edge to the list of vertexes
 
     # For both vertexes making up the edge, add a reference to the edge
@@ -174,29 +175,13 @@ print(len(qOld_rot), "Rotational Degrees of Freedom")
 for vertex in vertexObjs:
     if vertex.end == True:
         end_edge = vertex.edges[0] # This vertex is an end, so it has one edge, which will be the first in its list
-        t0 = end_edge.tangent
 
-        # Now iterate over edges until
-        # Maybe save the q0
-        # At the end node, create a reference vector.
-        #arb_v = np.array([0, 0, -1])
-        #a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
 
-        #if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3: # Check if t0 and arb_v are parallel
-        #  arb_v = np.array([0, 1, 0])
-        #  a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+        print(vertex.edges)
 
-        # NOTE: Need to generate a vector of q_segment that follows each END to a JUNCTION or END
-        #getQSegment(vertex, vertexObjs, edgeObjs)
+        # We give this function the end vertex and edge, and allow it to traverse the network until it reaches an end or a junction
+        computeSpaceParallel_OO(vertex, end_edge, edgeObjs, vertexObjs)
 
-        # q_segment will need to be passed. computeSpaceParallel will need to be changed not have 4 inputs
-        #a1, a2 = computeSpaceParallel(a1_first, q_segment)
-
-quit()
-
-# Material frame
-theta = qOld[3::4] # Extract theta angles
-m1, m2 = computeMaterialDirectors(a1, a2, theta)
 
 # NATURAL CURVATURE AND TWIST
 
