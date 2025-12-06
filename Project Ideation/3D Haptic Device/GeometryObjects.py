@@ -48,6 +48,7 @@ class EdgeObj:
         self.theta = theta
         self.m1 = [] # 1st material director
         self.m2 = [] # 2nd material director
+        self.kappa = []
 
     def get_other_vertex(self, vertex):
         if self.vertex1 == vertex:

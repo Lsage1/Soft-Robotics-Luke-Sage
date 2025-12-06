@@ -12,10 +12,14 @@ from GeometryObjects import EdgeObj
 from GeometryObjects import VertexObj
 from ComputeTangentEdges import ComputeTangentEdges
 from computeSpaceParallel_OO import computeSpaceParallel_OO
+from getKappa_OO import getKappa_OO
 
 
-vertices = np.array([[0,0,0], [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0], [0,0.1,-0.05], [0.1,0,-0.05], [0,-0.1,-0.05], [-0.1, 0,-0.05]])
-edges = np.array([[0,1], [0,2], [0,3], [0,4], [1,5], [2,6], [3,7], [4,8]])
+vertices = np.array([[0,0,0],
+                     [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0],
+                     [0,0.1,-0.05], [0.1,0,-0.05], [0,-0.1,-0.05], [-0.1, 0,-0.05],
+                     [0,0.15,-0.1], [0.15,0,-0.1], [0,-0.15,-0.1], [-0.15, 0,-0.1]])
+edges = np.array([[0,1], [0,2], [0,3], [0,4], [1,5], [2,6], [3,7], [4,8], [5,9], [6, 10], [7, 11], [8, 12]])
 
 # Inputs
 nv = len(vertices) # number of nodes
@@ -183,13 +187,10 @@ for vertex in vertexObjs:
         computeSpaceParallel_OO(vertex, end_edge, edgeObjs, vertexObjs)
 
 
-# NATURAL CURVATURE AND TWIST
+        # NATURAL CURVATURE AND TWIST
 
-# Reference twist
-refTwist = np.zeros(nv) # Or use the function we computed
-
-# Natural curvature
-kappaBar = getKappa(qOld, m1, m2)
+        # Natural curvature
+        kappaBar = getKappa_OO(vertex, end_edge, edgeObjs, vertexObjs)
 
 # Natural twist
 twistBar = np.zeros(nv)
