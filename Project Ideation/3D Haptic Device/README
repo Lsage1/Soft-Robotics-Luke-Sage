@@ -1,1 +1,5 @@
 Ensure that every rod in the network has at least 3 edges between ends or junctions, otherwise errors may occur
+
+Known issues: right now, every end must meet a junction, or it will be overwritten. I still need to add a way for the setup to detect an end has been taken care of from the other side.
+Logic is not totally set up yet for the junctions. The plan is to basically run kappa calculations starting from every edge until a junction is reached.
+The first time a junction is reached, it will be handled by the edge we have travelled over, then ignored the rest of the times.

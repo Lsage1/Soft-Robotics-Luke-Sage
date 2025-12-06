@@ -192,6 +192,8 @@ for vertex in vertexObjs:
         # Natural curvature
         kappaBar = getKappa_OO(vertex, end_edge, edgeObjs, vertexObjs)
 
+quit()
+
 # Natural twist
 twistBar = np.zeros(nv)
 

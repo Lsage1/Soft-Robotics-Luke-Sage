@@ -11,6 +11,7 @@ class VertexObj:
         self.end = False
         self.voronoi_length = []
         self.coords = (x,y,z)
+        self.junction_handled = False
 
 
     def get_attached_vertex(self):
