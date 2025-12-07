@@ -249,9 +249,13 @@ while tree_search_active:
     print("Coordinates: ", vertex0.coords, vertex1.coords, found_edge)
     PlotRodNetwork(vertexObjs, edgeObjs, [], [edge01, edge12])
 
+    # Make sure every edge knows the edge it came from. This will be used to calculate twisting between beams
+    edge12.root = edge01
+
     vertex2 = edge12.get_other_vertex(vertex1)
-    # computeSpaceParallel_OO(vertex, end_edge, edgeObjs, vertexObjs)
-    # kappaBar = getKappa_OO(vertex, end_edge, edgeObjs, vertexObjs)    # Natural curvature
+    computeSpaceParallel_OO(edge01, edge02)
+    kappaBar = getKappa_OO(vertex0, vertex1, vertex2, edge01, edge12)    # Natural curvature
+
     # Move on to next edge and vertex
     edge12.handled = True
     edge01 = edge12
@@ -266,7 +270,6 @@ while tree_search_active:
 
 
 
-quit()
 
 # Natural twist
 twistBar = np.zeros(nv)

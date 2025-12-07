@@ -1,5 +1,4 @@
 
-Known issues: It seems possible to
 
 Need to identify one edge into the junction as a root. If I want to average twisting between
 two non-root edges, I need to compare the twist using the root as a reference
@@ -8,3 +7,6 @@ It is currently unclear if I need to do that for bending. My assumption is proba
 
 ** REFERENCE A PAPER THAT DOES THIS
 ** ALSO REFERENCE A PAPER THAT AVERAGES TWIST ACROSS EDGES IN A JUNCTION
+
+** If any potential issues arise at parallel tangent edges, investigate the possibility of numerical error
+ in the computespaceparallel_oo function

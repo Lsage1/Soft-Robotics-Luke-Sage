@@ -12,6 +12,7 @@ class VertexObj:
         self.voronoi_length = []
         self.coords = (x,y,z)
         self.junction_handled = False
+        self.dofs_fixed = [False, False, False]
 
 
     def get_attached_vertex(self):
@@ -57,6 +58,9 @@ class EdgeObj:
         self.m2 = None # 2nd material director
         self.kappa = None
         self.handled = False
+        self.root = None # What edge was curvature and material directors calculated from?
+        self.twist = 0 # Initially set twist of each edge to be zero.
+        self.twist_dof_free = True
 
     def get_other_vertex(self, vertex):
         if self.vertex1 == vertex:
