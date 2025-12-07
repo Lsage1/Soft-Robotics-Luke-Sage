@@ -33,9 +33,11 @@ class VertexObj:
             else:
                 return self.edges[0]
 
-
-
-
+    def get_unhandled_edge(self): # Return the next unhandled edge
+        for edge in self.edges:
+            if not getattr(edge, 'handled', False):
+                return edge, True  # found an unhandled edge
+        return None, False  # no unhandled edges
 
 
 class EdgeObj:
@@ -44,12 +46,13 @@ class EdgeObj:
         self.vertex2 = v2
         self.rest_length = 0
         self.tangent = []
-        self.u1 = [] # 1st space parallel director
-        self.u2 = [] # 2nd space parallel director
+        self.u1 = None # 1st space parallel director
+        self.u2 = None # 2nd space parallel director
         self.theta = theta
-        self.m1 = [] # 1st material director
-        self.m2 = [] # 2nd material director
-        self.kappa = []
+        self.m1 = None # 1st material director
+        self.m2 = None # 2nd material director
+        self.kappa = None
+        self.handled = False
 
     def get_other_vertex(self, vertex):
         if self.vertex1 == vertex:

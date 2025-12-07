@@ -13,13 +13,14 @@ from GeometryObjects import VertexObj
 from ComputeTangentEdges import ComputeTangentEdges
 from computeSpaceParallel_OO import computeSpaceParallel_OO
 from getKappa_OO import getKappa_OO
+from get_next_tree_edge import get_next_tree_edge
 
 
 vertices = np.array([[0,0,0],
                      [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0],
                      [0,0.1,-0.05], [0.1,0,-0.05], [0,-0.1,-0.05], [-0.1, 0,-0.05],
-                     [0,0.15,-0.1], [0.15,0,-0.1], [0,-0.15,-0.1], [-0.15, 0,-0.1]])
-edges = np.array([[0,1], [0,2], [0,3], [0,4], [1,5], [2,6], [3,7], [4,8], [5,9], [6, 10], [7, 11], [8, 12]])
+                     [0,0.15,-0.1], [0.15,0,-0.1], [0,-0.15,-0.1], [-0.15, 0,-0.1], [-0.1, 0, -0.1]])
+edges = np.array([[0,1], [0,2], [0,3], [0,4], [1,5], [2,6], [3,7], [4,8], [5,9], [6, 10], [7, 11], [8, 12], [8,13]])
 
 # Inputs
 nv = len(vertices) # number of nodes
@@ -162,7 +163,7 @@ for c in range(nv):
 uOld_tr = np.zeros_like(qOld_tr) # Velocity is zero initially
 # Note: rotational (along edge axis) inertia is not tracked
 
-PlotRodNetwork(vertices, edges)
+PlotRodNetwork(vertexObjs, edgeObjs)
 
 # COMPUTE THE FRAMES
 # Reference frame (At t=0, we initialize it with space parallel reference frame but not mandatory)
@@ -176,21 +177,78 @@ ComputeTangentEdges(edgeObjs)
 # NOTE:  For each "Start point" do this. Calculate a reference vector, considered the origin of no rotation
 print(len(qOld_tr), "Translational Degrees of Freedom")
 print(len(qOld_rot), "Rotational Degrees of Freedom")
+
+# Begin a Network wide sweep. Essentially a tree search, establishing startup stuff
+vertices_handled = []
+
 for vertex in vertexObjs:
-    if vertex.end == True:
+    if vertex.end:
         end_edge = vertex.edges[0] # This vertex is an end, so it has one edge, which will be the first in its list
+        # Create an arbitrary vector for the first edge
+        t0 = end_edge.tangent
+
+        # At the end node, create a reference vector.
+        arb_v = np.array([0, 0, -1])
+        u1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+
+        if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3:  # Check if t0 and arb_v are parallel
+            arb_v = np.array([0, 1, 0])
+            u1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+
+        u1_first = u1_first / np.linalg.norm(u1_first)  # Ensure it is unit
+
+        end_edge.u1 = u1_first
+        end_edge.u2 = np.cross(t0, u1_first)
+        end_edge.u2 = end_edge.u2 / np.linalg.norm(end_edge.u2)  # Ensure it is unit
+
+        tree_search_active = True
+        edge01 = end_edge
+        vertex0 = vertex
+        activeJunction = [] # When a junction is reached, store the junction vertex, and the root edge that led into it
+
+        ## V0 ------E01------ V1 -------E12------- V2
+        while tree_search_active:
+            edge01.handled = True
+            vertex1 = edge01.get_other_vertex(vertex0)
+            print("Coordinates: ", vertex0.coords, vertex1.coords)
+            # Only add junction if it hasn't been added yet
+            if vertex1.junction and all(j[0] != vertex1 for j in activeJunction):
+                activeJunction.append([vertex1, edge01])
 
 
-        print(vertex.edges)
+            edge12, found_edge = get_next_tree_edge(edge01, vertex1)
 
+            PlotRodNetwork(vertexObjs, edgeObjs)
+
+            if not found_edge:
+                if len(activeJunction) > 0:
+                    print("hit an end!")
+                    # Backtrack to unhandled junction
+                    vertex1, edge01 = activeJunction.pop() # Get the most recently added junction
+                    vertex0 = edge01.get_other_vertex(vertex1)
+                else:
+                    print("No edge found! Assuming tree is finished")
+                    break
+            else:
+                vertex2 = edge12.get_other_vertex(vertex1)
+                # computeSpaceParallel_OO(vertex, end_edge, edgeObjs, vertexObjs)
+                # kappaBar = getKappa_OO(vertex, end_edge, edgeObjs, vertexObjs)    # Natural curvature
+
+
+
+                # Move on to next edge and vertex
+                edge01 = edge12
+                vertex0 = vertex1
+                vertex1 = vertex2
+
+
+
+
+
+        break
         # We give this function the end vertex and edge, and allow it to traverse the network until it reaches an end or a junction
-        computeSpaceParallel_OO(vertex, end_edge, edgeObjs, vertexObjs)
 
 
-        # NATURAL CURVATURE AND TWIST
-
-        # Natural curvature
-        kappaBar = getKappa_OO(vertex, end_edge, edgeObjs, vertexObjs)
 
 quit()
 
