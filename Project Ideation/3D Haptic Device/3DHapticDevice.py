@@ -179,73 +179,88 @@ print(len(qOld_tr), "Translational Degrees of Freedom")
 print(len(qOld_rot), "Rotational Degrees of Freedom")
 
 # Begin a Network wide sweep. Essentially a tree search, establishing startup stuff
-vertices_handled = []
-
 for vertex in vertexObjs:
-    if vertex.end:
-        end_edge = vertex.edges[0] # This vertex is an end, so it has one edge, which will be the first in its list
-        # Create an arbitrary vector for the first edge
-        t0 = end_edge.tangent
+    print(vertex.coords, vertex.end)
 
-        # At the end node, create a reference vector.
-        arb_v = np.array([0, 0, -1])
-        u1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
-
-        if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3:  # Check if t0 and arb_v are parallel
-            arb_v = np.array([0, 1, 0])
-            u1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
-
-        u1_first = u1_first / np.linalg.norm(u1_first)  # Ensure it is unit
-
-        end_edge.u1 = u1_first
-        end_edge.u2 = np.cross(t0, u1_first)
-        end_edge.u2 = end_edge.u2 / np.linalg.norm(end_edge.u2)  # Ensure it is unit
-
-        tree_search_active = True
-        edge01 = end_edge
-        vertex0 = vertex
-        activeJunction = [] # When a junction is reached, store the junction vertex, and the root edge that led into it
-
-        ## V0 ------E01------ V1 -------E12------- V2
-        while tree_search_active:
-            edge01.handled = True
-            vertex1 = edge01.get_other_vertex(vertex0)
-            print("Coordinates: ", vertex0.coords, vertex1.coords)
-            # Only add junction if it hasn't been added yet
-            if vertex1.junction and all(j[0] != vertex1 for j in activeJunction):
-                activeJunction.append([vertex1, edge01])
+first_end_vertex = next(v for v in vertexObjs if v.end) # Get the first vertex with an end
 
 
-            edge12, found_edge = get_next_tree_edge(edge01, vertex1)
+end_edge = first_end_vertex.edges[0] # This vertex is an end, so it has one edge, which will be the first in its list
+# Create an arbitrary vector for the first edge
+t0 = end_edge.tangent
 
-            PlotRodNetwork(vertexObjs, edgeObjs)
+# At the end node, create a reference vector.
+arb_v = np.array([0, 0, -1])
+u1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
 
-            if not found_edge:
-                if len(activeJunction) > 0:
-                    print("hit an end!")
-                    # Backtrack to unhandled junction
-                    vertex1, edge01 = activeJunction.pop() # Get the most recently added junction
+if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3:  # Check if t0 and arb_v are parallel
+    arb_v = np.array([0, 1, 0])
+    u1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+
+u1_first = u1_first / np.linalg.norm(u1_first)  # Ensure it is unit
+
+end_edge.u1 = u1_first
+end_edge.u2 = np.cross(t0, u1_first)
+end_edge.u2 = end_edge.u2 / np.linalg.norm(end_edge.u2)  # Ensure it is unit
+
+# TREE SEARCH
+
+tree_search_active = True
+edge01 = end_edge
+vertex0 = first_end_vertex
+activeJunction = [] # When a junction is reached, store the junction vertex, and the root edge that led into it
+
+## V0 ------E01------ V1 -------E12------- V2
+while tree_search_active:
+    vertex1 = edge01.get_other_vertex(vertex0)
+    # Only add junction if it hasn't been added yet
+    if vertex1.junction:
+        # Get all outgoing edges except the one we came from
+        remaining = [e for e in vertex1.edges if (not e.handled and e is not edge01)]
+
+        # Only push the junction if it has future branches
+        if len(remaining) > 0 and all(j[0] != vertex1 for j in activeJunction):
+            activeJunction.append([vertex1, edge01])
+
+    edge12, found_edge = vertex1.get_unhandled_edge(edge01)
+
+    if not found_edge:
+        if len(activeJunction) > 0:
+            print("hit an end!")
+            # Backtrack through junctions until we find one with unhandled edges
+            while len(activeJunction) > 0:
+                vertex1, edge01 = activeJunction[-1]  # Most recent junction
+                edge12, found_edge = vertex1.get_unhandled_edge(edge01)
+                if found_edge:
                     vertex0 = edge01.get_other_vertex(vertex1)
+                    break  # Found an edge, exit backtracking
                 else:
-                    print("No edge found! Assuming tree is finished")
-                    break
+                    activeJunction.pop()  # No edges left at this junction, remove it
             else:
-                vertex2 = edge12.get_other_vertex(vertex1)
-                # computeSpaceParallel_OO(vertex, end_edge, edgeObjs, vertexObjs)
-                # kappaBar = getKappa_OO(vertex, end_edge, edgeObjs, vertexObjs)    # Natural curvature
+                # If we exhausted all junctions
+                print("No edge found! Assuming tree is finished")
+                break
+
+        else:
+            print("No edge found! Assuming tree is finished")
+            break
+
+    print("Coordinates: ", vertex0.coords, vertex1.coords, found_edge)
+    PlotRodNetwork(vertexObjs, edgeObjs, [], [edge01, edge12])
+
+    vertex2 = edge12.get_other_vertex(vertex1)
+    # computeSpaceParallel_OO(vertex, end_edge, edgeObjs, vertexObjs)
+    # kappaBar = getKappa_OO(vertex, end_edge, edgeObjs, vertexObjs)    # Natural curvature
+    # Move on to next edge and vertex
+    edge12.handled = True
+    edge01 = edge12
+    vertex0 = vertex1
+    vertex1 = vertex2
 
 
 
-                # Move on to next edge and vertex
-                edge01 = edge12
-                vertex0 = vertex1
-                vertex1 = vertex2
 
 
-
-
-
-        break
         # We give this function the end vertex and edge, and allow it to traverse the network until it reaches an end or a junction
 
 

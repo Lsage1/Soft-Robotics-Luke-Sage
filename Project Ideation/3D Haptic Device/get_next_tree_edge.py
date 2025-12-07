@@ -3,7 +3,7 @@ from GeometryObjects import VertexObj
 from GeometryObjects import EdgeObj
 
 def get_next_tree_edge(prev_edge, joining_vertex):
-    if not prev_edge.handled:
-        raise ValueError("last edge wasn't handled yet")
-    new_edge, doneFlag = joining_vertex.get_unhandled_edge()
-    return new_edge, doneFlag
+
+    new_edge, found_edge = joining_vertex.get_unhandled_edge(prev_edge)
+
+    return new_edge, found_edge

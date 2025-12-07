@@ -33,10 +33,14 @@ class VertexObj:
             else:
                 return self.edges[0]
 
-    def get_unhandled_edge(self): # Return the next unhandled edge
+    def get_unhandled_edge(self, prev_edge): # Return the next unhandled edge
         for edge in self.edges:
-            if not getattr(edge, 'handled', False):
-                return edge, True  # found an unhandled edge
+            if edge != prev_edge and edge.handled == False:
+
+                print("found an unhandled edge at vertex: ", self.coords, edge.get_other_vertex(self).coords)
+                return edge, True # Found an unhandled Edge
+
+        print("Could not find an unhandled edge at vertex: ", self.coords)
         return None, False  # no unhandled edges
 
 
