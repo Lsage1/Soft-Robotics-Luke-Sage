@@ -8,6 +8,7 @@ from getFb import getFb
 from getFt import getFt
 from computeTimeParallel_OO import computeTimeParallel_OO
 from ComputeTangentEdges import ComputeTangentEdges
+from getRefTwist_OO import getRefTwist_OO
 
 def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
             qOld, uOld,
@@ -25,7 +26,11 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
     computeTimeParallel_OO(end_edge, first_end_vertex, edgeObjs, qOld, q_new) # Time parallel reference frame along the rod.
     # Reference twist
     ComputeTangentEdges(edgeObjs, True)
-    refTwist_new = getRefTwist(a1_new, tangent, refTwist) # Reference twist vector of size nv
+
+
+    refTwist_new = getRefTwist_OO(vertexObjs, edgeObjs, end_edge, first_end_vertex) # Reference twist vector of size nv
+
+
     quit()
     # Material frame
     theta = q_new[3::4]

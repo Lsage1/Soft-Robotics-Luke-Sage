@@ -2,6 +2,7 @@ import numpy as np
 
 class VertexObj:
     def __init__(self, x,y,z, index):
+        self.children = []
         self.index = index
         self.edges = []
         self.rest_coords = (x,y,z)
@@ -16,6 +17,7 @@ class VertexObj:
         self.dofs_fixed = [False, False, False]
         self.rest_kappa = [None, None]
         self.kappa = [None, None]
+        self.ref_twist = []
 
 
     def get_attached_vertex(self):
@@ -55,6 +57,8 @@ class VertexObj:
 
 class EdgeObj:
     def __init__(self, v1, v2, theta):
+        self.children = []
+        self.parent = None
         self.vertex1 = v1
         self.vertex2 = v2
         self.rest_length = 0
@@ -72,7 +76,7 @@ class EdgeObj:
         self.m2 = None # 2nd material director
         self.handled = False
         self.root = None # What edge was curvature and material directors calculated from?
-        self.ref_twist = 0 # Initially set twist of each edge to be zero.
+        self.rest_twist = 0 # Initially set twist of each edge to be zero.
         self.twist = 0 # Initialize self.twist as equal to the ref_twist, which is zero
         self.twist_fixed = False
 
@@ -81,4 +85,16 @@ class EdgeObj:
             return self.vertex2
         else:
             return self.vertex1
+
+    def get_branch_number(self):
+        parent = self.parent
+        if parent is None:
+            return None
+
+        try:
+            return parent.children.index(self)
+        except ValueError("self is not in parent children"):
+            # self is not in parent.children
+            return None
+
 

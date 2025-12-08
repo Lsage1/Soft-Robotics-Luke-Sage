@@ -14,3 +14,5 @@ It is currently unclear if I need to do that for bending. My assumption is proba
  An AI code review suggests this:
 Guard against zero/near-zero norms when orthonormalizing
 Your projection + normalization can fail if parallel_transport returns a vector nearly parallel to t1 (or numerically zero after projection). Normalization will divide by a tiny number → NaNs.
+
+I should really make a recursive function to step further into the future.

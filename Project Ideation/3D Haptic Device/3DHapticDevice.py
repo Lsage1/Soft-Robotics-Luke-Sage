@@ -262,6 +262,9 @@ while tree_search_active:
     # Compute material directors based on transported frames
     computeMaterialDirectors_OO(edge12)
 
+    edge12.parent = edge01
+    edge01.children.append(edge12)
+    vertex1.children.append(edge12)
 
     # Move on to next edge and vertex
     edge12.handled = True
@@ -269,6 +272,8 @@ while tree_search_active:
     vertex0 = vertex1
     vertex1 = vertex2
 
+for vertex in vertexObjs:
+    vertex.ref_twist = np.zeros(len(vertex.children))
 
 
 # DO A SECOND TREE PASS. We need to do this to getKappa for each edge, since we don't yet know m1, m2 for the current edge in the first tree seach.
@@ -324,6 +329,12 @@ while tree_search_active:
     # Compute Curvature and Twist
     getKappa_OO(vertex0, vertex1, vertex2, edge01, edge12)  # Natural curvature
     vertex1.rest_kappa = vertex1.kappa # Ensure rest kappa is set, and getKappa can be reused in the objective Function
+
+    # initialize a list of refTwists that is as long as the number of child branches
+
+    if len(edge12.children) >= 1:
+        vertex1.ref_twist = np.zeros(len(edge12.children))
+
     # Move on to next edge and vertex
     edge12.handled = True
     edge01 = edge12
@@ -346,7 +357,7 @@ for c, vertex in enumerate(vertexObjs):
     q_tr[c*3 : c*3+3] = np.array(vertex.coords)
 
 for d, edge in enumerate(edgeObjs):
-    q_rot[d] = edge.ref_twist
+    q_rot[d] = edge.rest_twist
 # TIME INTEGRATION LOOP
 q_0 = np.concatenate([q_tr, q_rot])
 

@@ -19,3 +19,5 @@ def getRefTwist(a1, tangent, refTwist = None):
         t2 =  tangent[c,  0:3]
         refTwist[c] = computeReferenceTwist(a1e, a1f, t1, t2, refTwist[c])
     return refTwist
+
+
