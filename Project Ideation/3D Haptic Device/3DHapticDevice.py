@@ -169,10 +169,10 @@ uOld_tr = np.zeros_like(qOld_tr) # Velocity is zero initially
 # Reference frame (At t=0, we initialize it with space parallel reference frame but not mandatory)
 
 # Call function to calculate tangent vector for each edge object
-ComputeTangentEdges(edgeObjs)
-
-# tangent = computeTangent(qOld_tr)
-
+ComputeTangentEdges(edgeObjs, True)
+for edge in edgeObjs:
+    edge.rest_tangent = edge.tangent
+    edge.tangent0 = edge.tangent
 
 # NOTE:  For each "Start point" do this. Calculate a reference vector, considered the origin of no rotation
 print(len(qOld_tr), "Translational Degrees of Freedom")
@@ -248,6 +248,8 @@ while tree_search_active:
 
     #print("Coordinates: ", vertex0.coords, vertex1.coords, found_edge)
     #PlotRodNetwork(vertexObjs, edgeObjs, [], [edge01, edge12])
+
+
 
     # Make sure every edge knows the edge it came from. This will be used to calculate twisting between beams
     edge12.root = edge01
@@ -347,7 +349,6 @@ for d, edge in enumerate(edgeObjs):
     q_rot[d] = edge.ref_twist
 # TIME INTEGRATION LOOP
 q_0 = np.concatenate([q_tr, q_rot])
-print(q_0)
 
  # Assemble free_index vector
 ndof_total = len(vertexObjs)*3 + len(edgeObjs) # Total number of DOFS:
@@ -378,12 +379,18 @@ uOld = np.zeros(len(q_0))
 Nsteps = round(totalTime / dt ) # number of steps
 ctime = 0 # Current time
 
+for edge in edgeObjs:
+    edge.a1_old = edge.a1.copy()
+    edge.a2_old = edge.a2.copy()
+    edge.tangent0 = edge.tangent.copy()
+    print(edge.a1, edge.a2, edge.a1_old, edge.a2_old)
+
 for timeStep in range(Nsteps):
 
 
-  q_new, u_new = objfun(end_edge,
+  q_new, u_new = objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
                         qOld, uOld,
-                        freeIndex, dt, tol,
+                        free_index, dt, tol,
                         massVector, massMatrix,
                         EA, EI, GJ, Fg)
 

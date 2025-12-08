@@ -10,7 +10,8 @@ class VertexObj:
         self.junction = False
         self.end = False
         self.voronoi_length = []
-        self.coords = (x,y,z)
+        self.coords = (x,y,z) # Current Coordinates
+        self.coords0 = (x,y,z) # Previous iteration coordinates
         self.junction_handled = False
         self.dofs_fixed = [False, False, False]
         self.rest_kappa = [None, None]
@@ -58,6 +59,8 @@ class EdgeObj:
         self.vertex2 = v2
         self.rest_length = 0
         self.tangent = None
+        self.tangent0 = None
+        self.rest_tangent = None
         self.u1 = None # 1st space parallel director
         self.u2 = None # 2nd space parallel director
         self.theta = theta
@@ -70,7 +73,7 @@ class EdgeObj:
         self.handled = False
         self.root = None # What edge was curvature and material directors calculated from?
         self.ref_twist = 0 # Initially set twist of each edge to be zero.
-        self.twist = self.ref_twist.copy() # Initialize self.twist as equal to the ref_twist, which is zero
+        self.twist = 0 # Initialize self.twist as equal to the ref_twist, which is zero
         self.twist_fixed = False
 
     def get_other_vertex(self, vertex):

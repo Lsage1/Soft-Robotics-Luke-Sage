@@ -10,3 +10,7 @@ It is currently unclear if I need to do that for bending. My assumption is proba
 
 ** If any potential issues arise at parallel tangent edges, investigate the possibility of numerical error
  in the computespaceparallel_oo function
+
+ An AI code review suggests this:
+Guard against zero/near-zero norms when orthonormalizing
+Your projection + normalization can fail if parallel_transport returns a vector nearly parallel to t1 (or numerically zero after projection). Normalization will divide by a tiny number → NaNs.

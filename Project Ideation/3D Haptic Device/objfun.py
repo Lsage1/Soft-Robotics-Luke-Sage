@@ -6,8 +6,10 @@ from computeMaterialDirectors import computeMaterialDirectors
 from getFs import getFs
 from getFb import getFb
 from getFt import getFt
+from computeTimeParallel_OO import computeTimeParallel_OO
+from ComputeTangentEdges import ComputeTangentEdges
 
-def objfun(end_edge,
+def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
             qOld, uOld,
             freeIndex, dt, tol,
             massVector, massMatrix,
@@ -20,10 +22,11 @@ def objfun(end_edge,
   while error > tol:
     # Reference frame
     # Compute a1_new, a2_new for each edge
-    a1_new, a2_new = computeTimeParallel(a1_old, qOld, q_new) # Time parallel reference frame along the rod.
+    computeTimeParallel_OO(end_edge, first_end_vertex, edgeObjs, qOld, q_new) # Time parallel reference frame along the rod.
     # Reference twist
-    tangent = computeTangent(q_new)
+    ComputeTangentEdges(edgeObjs, True)
     refTwist_new = getRefTwist(a1_new, tangent, refTwist) # Reference twist vector of size nv
+    quit()
     # Material frame
     theta = q_new[3::4]
     m1, m2 = computeMaterialDirectors(a1_new, a2_new, theta) # Material directors of size nv x 3
