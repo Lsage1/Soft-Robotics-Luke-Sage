@@ -7,15 +7,11 @@ from getFs import getFs
 from getFb import getFb
 from getFt import getFt
 
-def objfun(qOld, uOld, a1_old, a2_old,
-           freeIndex,
-           dt, tol,
-           refTwist,
-           massVector, massMatrix,
-           EA, refLen,
-           EI, GJ, voronoiRefLen,
-           kappaBar, twistBar,
-           Fg):
+def objfun(end_edge,
+            qOld, uOld,
+            freeIndex, dt, tol,
+            massVector, massMatrix,
+            EA, EI, GJ, Fg):
 
   q_new = qOld.copy()
   iter = 0
@@ -23,7 +19,8 @@ def objfun(qOld, uOld, a1_old, a2_old,
 
   while error > tol:
     # Reference frame
-    a1_new, a2_new = computeTimeParallel(a1_old, qOld, q_new) # Time parallel reference frame along the rod
+    # Compute a1_new, a2_new for each edge
+    a1_new, a2_new = computeTimeParallel(a1_old, qOld, q_new) # Time parallel reference frame along the rod.
     # Reference twist
     tangent = computeTangent(q_new)
     refTwist_new = getRefTwist(a1_new, tangent, refTwist) # Reference twist vector of size nv

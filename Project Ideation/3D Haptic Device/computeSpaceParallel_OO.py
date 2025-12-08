@@ -11,9 +11,9 @@ def computeSpaceParallel_OO(edge01, edge12):
     t0 = edge01.tangent / np.linalg.norm(edge01.tangent)
     t1 = edge12.tangent / np.linalg.norm(edge12.tangent)
 
-    edge12.u1 = parallel_transport(edge01.u1, t0, t1)
-    edge12.u1 = edge12.u1 / np.linalg.norm(edge12.u1) # Ensure it is unit
-    edge12.u2 = np.cross(t1, edge12.u1)
-    edge12.u2 = edge12.u2 / np.linalg.norm(edge12.u2) # Ensure it is unit
+    edge12.a1 = parallel_transport(edge01.a1, t0, t1)
+    edge12.a1 = edge12.a1 / np.linalg.norm(edge12.a1) # Ensure it is unit
+    edge12.a2 = np.cross(t1, edge12.a1)
+    edge12.a2 = edge12.a2 / np.linalg.norm(edge12.a2) # Ensure it is unit
 
     return

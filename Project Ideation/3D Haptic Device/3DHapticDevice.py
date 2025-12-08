@@ -6,14 +6,13 @@ from computeSpaceParallel import computeSpaceParallel
 from computeMaterialDirectors import computeMaterialDirectors
 from getKappa import getKappa
 from objfun import objfun
-from computeKappa import computeKappa
 from PlotRodNetwork import PlotRodNetwork
 from GeometryObjects import EdgeObj
 from GeometryObjects import VertexObj
 from ComputeTangentEdges import ComputeTangentEdges
 from computeSpaceParallel_OO import computeSpaceParallel_OO
 from getKappa_OO import getKappa_OO
-from get_next_tree_edge import get_next_tree_edge
+from computeMaterialDirectors_OO import computeMaterialDirectors_OO
 
 
 vertices = np.array([[0,0,0],
@@ -164,7 +163,7 @@ for c in range(nv):
 uOld_tr = np.zeros_like(qOld_tr) # Velocity is zero initially
 # Note: rotational (along edge axis) inertia is not tracked
 
-PlotRodNetwork(vertexObjs, edgeObjs)
+#PlotRodNetwork(vertexObjs, edgeObjs)
 
 # COMPUTE THE FRAMES
 # Reference frame (At t=0, we initialize it with space parallel reference frame but not mandatory)
@@ -180,8 +179,7 @@ print(len(qOld_tr), "Translational Degrees of Freedom")
 print(len(qOld_rot), "Rotational Degrees of Freedom")
 
 # Begin a Network wide sweep. Essentially a tree search, establishing startup stuff
-for vertex in vertexObjs:
-    print(vertex.coords, vertex.end)
+
 
 first_end_vertex = next(v for v in vertexObjs if v.end) # Get the first vertex with an end
 
@@ -192,17 +190,19 @@ t0 = end_edge.tangent
 
 # At the end node, create a reference vector.
 arb_v = np.array([0, 0, -1])
-u1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
 
 if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3:  # Check if t0 and arb_v are parallel
     arb_v = np.array([0, 1, 0])
-    u1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
+    a1_first = np.cross(t0, arb_v) / np.linalg.norm(np.cross(t0, arb_v))
 
-u1_first = u1_first / np.linalg.norm(u1_first)  # Ensure it is unit
+a1_first = a1_first / np.linalg.norm(a1_first)  # Ensure it is unit
 
-end_edge.u1 = u1_first
-end_edge.u2 = np.cross(t0, u1_first)
-end_edge.u2 = end_edge.u2 / np.linalg.norm(end_edge.u2)  # Ensure it is unit
+end_edge.a1 = a1_first
+end_edge.a2 = np.cross(t0, a1_first)
+end_edge.a2 = end_edge.a1 / np.linalg.norm(end_edge.a2)  # Ensure it is unit
+computeMaterialDirectors_OO(end_edge)
+end_edge.handled = True
 
 # TREE SEARCH
 
@@ -227,7 +227,7 @@ while tree_search_active:
 
     if not found_edge:
         if len(activeJunction) > 0:
-            print("hit an end!")
+            #print("hit an end!")
             # Backtrack through junctions until we find one with unhandled edges
             while len(activeJunction) > 0:
                 vertex1, edge01 = activeJunction[-1]  # Most recent junction
@@ -239,22 +239,27 @@ while tree_search_active:
                     activeJunction.pop()  # No edges left at this junction, remove it
             else:
                 # If we exhausted all junctions
-                print("No edge found! Assuming tree is finished")
+                #print("No edge found! Assuming tree is finished")
                 break
 
         else:
-            print("No edge found! Assuming tree is finished")
+            print("No edge found! Assuming tree search 1 is finished")
             break
 
-    print("Coordinates: ", vertex0.coords, vertex1.coords, found_edge)
-    PlotRodNetwork(vertexObjs, edgeObjs, [], [edge01, edge12])
+    #print("Coordinates: ", vertex0.coords, vertex1.coords, found_edge)
+    #PlotRodNetwork(vertexObjs, edgeObjs, [], [edge01, edge12])
 
     # Make sure every edge knows the edge it came from. This will be used to calculate twisting between beams
     edge12.root = edge01
 
     vertex2 = edge12.get_other_vertex(vertex1)
-    computeSpaceParallel_OO(edge01, edge02)
-    kappaBar = getKappa_OO(vertex0, vertex1, vertex2, edge01, edge12)    # Natural curvature
+    
+    # Parallel Transport frames from previous edge
+    computeSpaceParallel_OO(edge01,edge12)
+
+    # Compute material directors based on transported frames
+    computeMaterialDirectors_OO(edge12)
+
 
     # Move on to next edge and vertex
     edge12.handled = True
@@ -264,81 +269,129 @@ while tree_search_active:
 
 
 
+# DO A SECOND TREE PASS. We need to do this to getKappa for each edge, since we don't yet know m1, m2 for the current edge in the first tree seach.
+# Setup for second tree pass
+for edge in edgeObjs:
+    edge.handled = False
+activeJunction = []
+tree_search_active = True
+edge01 = end_edge
+vertex0 = first_end_vertex
+print("Starting second Tree Pass")
+
+while tree_search_active:
+    vertex1 = edge01.get_other_vertex(vertex0)
+    # Only add junction if it hasn't been added yet
+    if vertex1.junction:
+        # Get all outgoing edges except the one we came from
+        remaining = [e for e in vertex1.edges if (not e.handled and e is not edge01)]
+
+        # Only push the junction if it has future branches
+        if len(remaining) > 0 and all(j[0] != vertex1 for j in activeJunction):
+            activeJunction.append([vertex1, edge01])
+
+    edge12, found_edge = vertex1.get_unhandled_edge(edge01)
+
+    if not found_edge:
+        if len(activeJunction) > 0:
+            #print("hit an end!")
+            # Backtrack through junctions until we find one with unhandled edges
+            while len(activeJunction) > 0:
+                vertex1, edge01 = activeJunction[-1]  # Most recent junction
+                edge12, found_edge = vertex1.get_unhandled_edge(edge01)
+                if found_edge:
+                    vertex0 = edge01.get_other_vertex(vertex1)
+                    break  # Found an edge, exit backtracking
+                else:
+                    activeJunction.pop()  # No edges left at this junction, remove it
+            else:
+                # If we exhausted all junctions
+                #print("No edge found! Assuming tree is finished")
+                break
+
+        else:
+            print("No edge found! Assuming tree is finished")
+            break
+
+    #PlotRodNetwork(vertexObjs, edgeObjs, [], [edge01, edge12])
+
+    # Make sure every edge knows the edge it came from. This will be used to calculate twisting between beams
+    edge12.root = edge01
+    vertex2 = edge12.get_other_vertex(vertex1)
+
+    # Compute Curvature and Twist
+    getKappa_OO(vertex0, vertex1, vertex2, edge01, edge12)  # Natural curvature
+    vertex1.rest_kappa = vertex1.kappa # Ensure rest kappa is set, and getKappa can be reused in the objective Function
+    # Move on to next edge and vertex
+    edge12.handled = True
+    edge01 = edge12
+    vertex0 = vertex1
+    vertex1 = vertex2
 
 
-        # We give this function the end vertex and edge, and allow it to traverse the network until it reaches an end or a junction
+
+# Set up boundary conditions: Index of fixed degrees of freedom. Form: [[VertexIndex, [X, Y, Z]]...]
+vertexObjs[0].fix([True, True, True])
+# Index of edges with fixed rotation. NOTE: Currently no edges have fixed rotation.
+edgeObjs[0].twist_fixed = True
 
 
 
+# Establish a Q_0 vector from degrees of freedom. It takes the for [x0, y0, z0, ... theta0, theta1, ...]
+q_tr = np.zeros(len(vertexObjs)*3)
+q_rot = np.zeros(len(edgeObjs))
+for c, vertex in enumerate(vertexObjs):
+    q_tr[c*3 : c*3+3] = np.array(vertex.coords)
 
-# Natural twist
-twistBar = np.zeros(nv)
+for d, edge in enumerate(edgeObjs):
+    q_rot[d] = edge.ref_twist
+# TIME INTEGRATION LOOP
+q_0 = np.concatenate([q_tr, q_rot])
+print(q_0)
 
-# Set up boundary conditions: First two nodes and first theta angle is fixed
+ # Assemble free_index vector
+ndof_total = len(vertexObjs)*3 + len(edgeObjs) # Total number of DOFS:
 
-# Fixed and free DOFs
-fixedIndex = np.arange(0, 7)
-freeIndex = np.arange(7, ndof)
-# If we include the x and y coordinates of the last node as FIXED DOFs, we will get better agreement
+free_index = list(range(ndof_total))
+for vertex in vertexObjs:
+    base_idx = vertex.index * 3
+    for i, fixed in enumerate(vertex.dofs_fixed):
+        if fixed:
+            dof_idx = base_idx + i
+            if dof_idx in free_index:
+                free_index.remove(dof_idx)
 
-###################################################################################################
-# TIME STEPPING LOOP
+# Remove fixed rotational DOFs
+for d, edge in enumerate(edgeObjs):
+    dof_idx = ndof_tr + d
+    if edge.twist_fixed:
+        if dof_idx in free_index:
+            free_index.remove(dof_idx)
+
+free_index = np.array(free_index, dtype=int)
+
+qOld = q_0
+uOld = np.zeros(len(q_0))
+
+
 
 Nsteps = round(totalTime / dt ) # number of steps
 ctime = 0 # Current time
-endZ_0 = qOld[-1] # End Z coordinate of the first time step
-endZ = np.zeros(Nsteps)
-
-a1_old = a1
-a2_old = a2
-
-# Time frame for considering steady state
-track_time = 2 # seconds
-track_steps = round(track_time / dt) # Number of steps to track if steady state has occurred.
-zdiff_list =  np.zeros(track_steps)
-breakStep = Nsteps # Code will plot until breakStep, but if we reach the final time step, it will plot the whole time.
-
-# PART 1
 
 for timeStep in range(Nsteps):
 
-  q_new, u_new, a1_new, a2_new = objfun(qOld, uOld, a1_old, a2_old,
-                                        freeIndex, dt, tol, refTwist,
-                                        massVector, massMatrix,
-                                        EA, refLen,
-                                        EI, GJ, voronoiRefLen,
-                                        kappaBar, twistBar,
-                                        Fg)
 
-  # Save endZ (z coordinate of the last node)
-  endZ[timeStep] = q_new[-1] - endZ_0
-
-  satisfied = False
-
-  # Assemble a list of times to check against the current time. Used to check if steady state is reached.
-  if ctime > track_time:
-      # assemble a list of the times to check against
-      track_list = endZ[timeStep-(track_steps-1) : timeStep+1]
-
-      # Obtain a list of the percent differences of each value within the check time
-      for j, i in enumerate(track_list[1:]):
-          zdiff_list[j] = ( (i - track_list[0]) / track_list[0] )
-      # Check if all the values within the check time are within 1% of the current time
-      satisfied = True
-      for z in zdiff_list:
-          if abs(z) > 0.01:
-              satisfied = False
-      if satisfied:
-          breakStep = timeStep
-          break
-
-  print('Current time: ', ctime, " Idx: ", timeStep, " Satisfied: ", satisfied)
+  q_new, u_new = objfun(end_edge,
+                        qOld, uOld,
+                        freeIndex, dt, tol,
+                        massVector, massMatrix,
+                        EA, EI, GJ, Fg)
 
 
 
+  print('Current time: ', ctime, " Idx: ", timeStep)
 
-  if timeStep % 10 == 0:
-    plotrod_simple(q_new, ctime)
+
 
   ctime += dt # Current time
   # Old parameters become new
@@ -347,15 +400,3 @@ for timeStep in range(Nsteps):
   a1_old = a1_new.copy()
   a2_old = a2_new.copy()
 
-plt.figure(2)
-time_array = np.arange(1, Nsteps+1, 1) * dt
-# Plot only until the convergence
-plt.plot(time_array[:breakStep], endZ[:breakStep], 'ro-')
-plt.plot(time_array[breakStep], endZ[breakStep], 'bo', label = "Steady State Value")
-
-plt.legend()
-plt.xlabel('Time (s)')
-plt.ylabel('End Z (m)')
-plt.show()
-
-print("Finished Task 1")

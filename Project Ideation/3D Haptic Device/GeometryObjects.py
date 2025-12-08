@@ -13,6 +13,8 @@ class VertexObj:
         self.coords = (x,y,z)
         self.junction_handled = False
         self.dofs_fixed = [False, False, False]
+        self.rest_kappa = [None, None]
+        self.kappa = [None, None]
 
 
     def get_attached_vertex(self):
@@ -38,11 +40,16 @@ class VertexObj:
         for edge in self.edges:
             if edge != prev_edge and edge.handled == False:
 
-                print("found an unhandled edge at vertex: ", self.coords, edge.get_other_vertex(self).coords)
+                #print("found an unhandled edge at vertex: ", self.coords, edge.get_other_vertex(self).coords)
                 return edge, True # Found an unhandled Edge
 
-        print("Could not find an unhandled edge at vertex: ", self.coords)
+        #print("Could not find an unhandled edge at vertex: ", self.coords)
         return None, False  # no unhandled edges
+
+    def fix(self, dofs): # Call this to fix X,Y,Z Degrees of Freedom
+        # Assign each DOF to avoid sharing list references
+        for i in range(3):
+            self.dofs_fixed[i] = bool(dofs[i])
 
 
 class EdgeObj:
@@ -50,17 +57,21 @@ class EdgeObj:
         self.vertex1 = v1
         self.vertex2 = v2
         self.rest_length = 0
-        self.tangent = []
+        self.tangent = None
         self.u1 = None # 1st space parallel director
         self.u2 = None # 2nd space parallel director
         self.theta = theta
-        self.m1 = None # 1st material director
+        self.a1 = None # Reference directors (before twist)
+        self.a2 = None
+        self.a1_old = None # Old reference directors - used to replace a1_old, a2_old
+        self.a2_old = None
+        self.m1 = None # 1st material director (after twist
         self.m2 = None # 2nd material director
-        self.kappa = None
         self.handled = False
         self.root = None # What edge was curvature and material directors calculated from?
-        self.twist = 0 # Initially set twist of each edge to be zero.
-        self.twist_dof_free = True
+        self.ref_twist = 0 # Initially set twist of each edge to be zero.
+        self.twist = self.ref_twist.copy() # Initialize self.twist as equal to the ref_twist, which is zero
+        self.twist_fixed = False
 
     def get_other_vertex(self, vertex):
         if self.vertex1 == vertex:
