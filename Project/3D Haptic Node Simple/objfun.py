@@ -21,22 +21,11 @@ def objfun(qOld, uOld, qindex, jun_index, a1_old, a2_old,
   print("objfun called")
 
 
-  q = [[], [], []]
-  # REMOVE JUNCTION DOF FROM qOld matrix, PLACE IT IN q_junction
-  q_junction = qOld[0][:3]
-  q[0] = qOld[0][3:]  # Remove the first 3 elements of q[1] because they will be shared with q[0] at the junction
-  q[1] = qOld[1][3:]
-  q[2] = qOld[2][3:]
-  q_all_old = np.concatenate([q_junction, q[0], q[1], q[2]])
 
-  u_junction = qOld[0][:3]
-  uOld[0] = uOld[0][3:]
-  uOld[1] = uOld[1][3:]
-  uOld[2] = uOld[2][3:]
   u_all_old = np.concatenate(uOld)
 
-  qNew = [qOld[i].copy() for i in range(nRods)]
-  q_all_new = q_all_old.copy()
+  #qNew = [qOld[i].copy() for i in range(nRods)]
+  #q_all_new = q_all_old.copy()
 
   iter = 0
   error = 10 * tol
@@ -61,6 +50,23 @@ def objfun(qOld, uOld, qindex, jun_index, a1_old, a2_old,
   Jt = np.zeros((nRods, ndof, ndof))
 
   while error > tol:
+    qNew = [qOld[i].copy() for i in range(nRods)]
+    uNew = [uOld[i].copy() for i in range(nRods)]
+
+    q = [[], [], []]
+    # REMOVE JUNCTION DOF FROM qOld matrix, PLACE IT IN q_junction
+    q_junction = qNew[0][:3]
+    q[0] = qNew[0][3:]  # Remove the first 3 elements of q[1] because they will be shared with q[0] at the junction
+    q[1] = qNew[1][3:]
+    q[2] = qNew[2][3:]
+    q_all_new = np.concatenate([q_junction, q[0], q[1], q[2]])
+
+    u = [[], [], []]
+    u_junction = uNew[0][:3]
+    u[0] = uNew[0][3:]
+    u[1] = uNew[1][3:]
+    u[2] = uNew[2][3:]
+    u_all_new = np.concatenate([u_junction, u[0], u[1], u[2]])
 
     # ============ PER-ROD NEWTON WORK =============
     for c in range(nRods):
