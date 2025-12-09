@@ -15,43 +15,91 @@ def objfun(qOld, uOld, a1_old, a2_old,
            EA, refLen,
            EI, GJ, voronoiRefLen,
            kappaBar, twistBar,
-           Fg):
+           Fg, nRods, tangent_old, nv):
 
-  q_new = qOld.copy()
+  q_new = [q.copy() for q in qOld]
   iter = 0
   error = 10 * tol
 
+  ndof = 4 * nv - 1
+  ne = nv - 1
+
+  a1_new = np.zeros((nRods, ne, 3))
+  a2_new = np.zeros((nRods, ne, 3))
+
+  tangent = np.zeros((nRods, ne, 3))
+  refTwist_new = np.zeros((nRods, nv))
+  theta = np.zeros((nRods, ne))              # <- corrected size
+
+  Fs = np.zeros((nRods, ndof))
+  Js = np.zeros((nRods, ndof, ndof))
+  m1 = np.zeros((nRods, ne, 3))
+  m2 = np.zeros((nRods, ne, 3))
+  Fb = np.zeros((nRods, ndof))
+  Jb = np.zeros((nRods, ndof, ndof))
+  Ft = np.zeros((nRods, ndof))
+  Jt = np.zeros((nRods, ndof, ndof))
+
+
+  Forces = np.zeros((nRods, ndof))
+  JForces = np.zeros((nRods, ndof, ndof))
+
+  f = np.zeros((nRods, ndof))
+  J = np.zeros((nRods, ndof, ndof))
+
+  f_free = np.zeros((nRods, len(freeIndex[0])))
+  J_free = np.zeros((nRods, len(freeIndex[0]), len(freeIndex[0])))
+  dq_free = np.zeros((nRods, len(freeIndex[0])))
+
+  uNew = np.zeros((nRods, ndof))
+
   while error > tol:
-    # Reference frame
-    a1_new, a2_new = computeTimeParallel(a1_old, qOld, q_new) # Time parallel reference frame along the rod
-    # Reference twist
-    tangent = computeTangent(q_new)
-    refTwist_new = getRefTwist(a1_new, tangent, refTwist) # Reference twist vector of size nv
-    # Material frame
-    theta = q_new[3::4]
-    m1, m2 = computeMaterialDirectors(a1_new, a2_new, theta) # Material directors of size nv x 3
 
-    # Computer elastic forces
-    Fs, Js = getFs(q_new, EA, refLen)
-    Fb, Jb = getFb(q_new, m1, m2, kappaBar, EI, voronoiRefLen)
-    Ft, Jt = getFt(q_new, refTwist_new, twistBar, GJ, voronoiRefLen)
+    # ---- Junction compatibility constraint ----
+    # junction_pos = np.mean([q_new[c][0:3] for c in range(nRods)], axis=0)
+    # for c in range(nRods):
+    #   q_new[c][0:3] = junction_pos
 
-    Forces = Fs + Fb + Ft + Fg
-    JForces = Js + Jb + Jt
+    # ============ PER-ROD NEWTON WORK =============
+    for c in range(nRods):
 
-    f = massVector / dt * ( (q_new - qOld) / dt - uOld ) - Forces
-    J = massMatrix / dt**2 - JForces
+      # Reference frame transport
+      a1_new[c], a2_new[c] = computeTimeParallel(a1_old[c], qOld[c], q_new[c])
 
-    # Extract the free part
-    f_free = f[freeIndex]
-    J_free = J[np.ix_(freeIndex, freeIndex)]
+      # Tangent and reference twist
+      tangent[c] = computeTangent(q_new[c])
+      refTwist_new[c] = getRefTwist(a1_new[c], tangent[c], refTwist[c])
 
-    dq_free = np.linalg.solve(J_free, f_free) # J \ f
+      # ===== θ =====
+      theta[c] = q_new[c][3::4]
 
-    q_new[freeIndex] -= dq_free
-    error = np.sum(np.abs(f_free)) # Correction
-    # Keep in mind that "error = np.sum(np.abs(dq_free))" is ok but tol should be computed based on length
+      # Material directors
+      m1[c], m2[c] = computeMaterialDirectors(a1_new[c], a2_new[c], theta[c])
+
+      # Elastic forces
+      Fs[c], Js[c] = getFs(q_new[c], EA, refLen[c])
+      Fb[c], Jb[c] = getFb(q_new[c], m1[c], m2[c], kappaBar[c], EI, voronoiRefLen[c])
+      Ft[c], Jt[c] = getFt(q_new[c], refTwist_new[c], twistBar[c], GJ, voronoiRefLen[c])
+
+      Forces[c] = Fs[c] + Fb[c] + Ft[c] + Fg[c]
+      print("F: ", Forces[c])
+      JForces[c] = Js[c] + Jb[c] + Jt[c]
+      f[c] = massVector / dt * ((q_new[c] - qOld[c]) / dt - uOld[c]) - Forces[c]
+      J[c] = massMatrix / dt**2 - JForces[c]
+      # Extract free components
+      f_free[c] = f[c][freeIndex[c]]
+      print("f_free: ", f_free[c])
+      J_free[c] = J[c][np.ix_(freeIndex[c], freeIndex[c])]
+
+      dq_free[c] = np.linalg.solve(J_free[c], f_free[c])
+      q_new[c][freeIndex[c]] -= dq_free[c]
+
+    # ---- Newton convergence ----
+    error = np.max(np.abs(f_free))
+    print(iter, error)
     iter += 1
+  # final velocity
+  for c in range(nRods):
+    uNew[c] = (q_new[c] - qOld[c]) / dt
 
-  uNew = (q_new - qOld) / dt
   return q_new, uNew, a1_new, a2_new

@@ -12,6 +12,7 @@ def getFs(q, EA, refLen):
   Fs = np.zeros(ndof)
   Js = np.zeros((ndof, ndof))
 
+
   # Loop over each stretching spring
   for c in range(ne):
     xa = q[4 * c : 4 * c + 3]

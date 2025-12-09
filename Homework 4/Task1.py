@@ -174,7 +174,6 @@ zdiff_list =  np.zeros(track_steps)
 breakStep = Nsteps # Code will plot until breakStep, but if we reach the final time step, it will plot the whole time.
 
 # PART 1
-
 for timeStep in range(Nsteps):
 
   q_new, u_new, a1_new, a2_new = objfun(qOld, uOld, a1_old, a2_old,
