@@ -8,17 +8,36 @@ from getFb import getFb
 from getFt import getFt
 from getFS_Junction import getFS_Junction
 
-def objfun(qOld, uOld, a1_old, a2_old,
-           freeIndex,
+def objfun(qOld, uOld, qindex, jun_index, a1_old, a2_old,
+           free_all_index,
            dt, tol,
            refTwist,
            massVector, massMatrix,
-           EA, refLen, refLenJunction,
+           EA, refLen,
            EI, GJ, voronoiRefLen,
            kappaBar, twistBar,
-           Fg, nRods, tangent_old, nv):
+           Fg, nRods, tangent_old, nv # NV is the number of vertices in an edge
+           ):
   print("objfun called")
-  q_new = [q.copy() for q in qOld]
+
+
+  q = [[], [], []]
+  # REMOVE JUNCTION DOF FROM qOld matrix, PLACE IT IN q_junction
+  q_junction = qOld[0][:3]
+  q[0] = qOld[0][3:]  # Remove the first 3 elements of q[1] because they will be shared with q[0] at the junction
+  q[1] = qOld[1][3:]
+  q[2] = qOld[2][3:]
+  q_all_old = np.concatenate([q_junction, q[0], q[1], q[2]])
+
+  u_junction = qOld[0][:3]
+  uOld[0] = uOld[0][3:]
+  uOld[1] = uOld[1][3:]
+  uOld[2] = uOld[2][3:]
+  u_all_old = np.concatenate(uOld)
+
+  qNew = [qOld[i].copy() for i in range(nRods)]
+  q_all_new = q_all_old.copy()
+
   iter = 0
   error = 10 * tol
 
@@ -41,56 +60,42 @@ def objfun(qOld, uOld, a1_old, a2_old,
   Ft = np.zeros((nRods, ndof))
   Jt = np.zeros((nRods, ndof, ndof))
 
-
-  JForces = np.zeros((nRods, ndof, ndof))
-
-
-
-  f_free = np.zeros((nRods, len(freeIndex[0])))
-  J_free = np.zeros((nRods, len(freeIndex[0]), len(freeIndex[0])))
-  dq_free = np.zeros((nRods, len(freeIndex[0])))
-
-  uNew = np.zeros((nRods, ndof))
-
   while error > tol:
-
-    # ---- Junction compatibility constraint ----
-    junction_pos = np.mean([q_new[c][0:3] for c in range(nRods)], axis=0)
-    for c in range(nRods):
-       q_new[c][0:3] = junction_pos
 
     # ============ PER-ROD NEWTON WORK =============
     for c in range(nRods):
 
           # Reference frame transport
-          a1_new[c], a2_new[c] = computeTimeParallel(a1_old[c], qOld[c], q_new[c])
+          a1_new[c], a2_new[c] = computeTimeParallel(a1_old[c], qOld[c], qNew[c])
 
           # Tangent and reference twist
-          tangent[c] = computeTangent(q_new[c])
+          tangent[c] = computeTangent(qNew[c])
           refTwist_new[c] = getRefTwist(a1_new[c], tangent[c], refTwist[c])
 
           # ===== θ =====
-          theta[c] = q_new[c][3::4]
+          theta[c] = qNew[c][3::4]
 
           # Material directors
           m1[c], m2[c] = computeMaterialDirectors(a1_new[c], a2_new[c], theta[c])
 
     # Elastic forces
-    Fs, Js = getFS_Junction(q_new, EA, refLen, refLenJunction)
+
+    Fs, Js = getFS_Junction(q_all_new, EA, refLen, jun_index, qindex, nRods, nv)
+
     #Fb, Jb = getFb(q_new[c], m1[c], m2[c], kappaBar[c], EI, voronoiRefLen[c])
     #Ft[c], Jt[c] = getFt(q_new[c], refTwist_new[c], twistBar[c], GJ, voronoiRefLen[c])
 
     Forces = Fs + Fg # + Fb[c] + Ft[c]
-    JForces = Js + Jb + Jt
-    F = massVector / dt * ((q_new - qOld) / dt - uOld) - Forces
+    JForces = Js # + Jb + Jt
+    F = massVector / dt * ((q_all_new - q_all_old) / dt - u_all_old) - Forces
     J = massMatrix / dt**2 - JForces
 
-    # Extract free components
-    f_free[c] = F[c][freeIndex[c]]
-    J_free[c] = J[c][np.ix_(freeIndex[c], freeIndex[c])]
+    # Extract free components #### NOTE: STILL NEED TO GET FREE INDICES OF Q_ALL FLATTENED FORM
+    f_free = F[free_all_index]
+    J_free = J[np.ix_(free_all_index, free_all_index)]
 
-    dq_free[c] = np.linalg.solve(J_free[c], f_free[c])
-    q_new[c][freeIndex[c]] -= dq_free[c]
+    dq_free = np.linalg.solve(J_free, f_free)
+    q_all_new[free_all_index] -= dq_free
 
     # ---- Newton convergence ----
 
@@ -98,8 +103,16 @@ def objfun(qOld, uOld, a1_old, a2_old,
     error = np.max(np.abs(f_free))
     print("iter: ", iter)
     iter += 1
-    # final velocity
-    for c in range(nRods):
-        uNew[c] = (q_new[c] - qOld[c]) / dt
 
-    return q_new, uNew, a1_new, a2_new
+    # REASSEMBLE A QNEW OR QOLD from q_all style vector
+    qNew = []
+    for c in range(nRods):
+        qNew.append(np.concatenate([q_all_new[:3], q_all_new[qindex[c]]]))
+    print(qNew)
+
+    # final velocity
+    uNew = [[], [], []]
+    for c in range(nRods):
+        uNew[c] = (qNew[c] - qOld[c]) / dt
+
+  return qNew, uNew, a1_new, a2_new

@@ -90,7 +90,6 @@ for r in range(nRods):
     twistBar[r] = np.zeros(nv[r])
 
 ###################################################################
-refLenJunction = 0.05 ######## CHANGE LATER ****
 
 
 # ---------------- FIXED/FREE DOFS ----------------
@@ -104,6 +103,8 @@ for r in range(nRods):
     fr = np.setdiff1d(all_indices, fi)
     fixedIndex.append(fi)
     freeIndex.append(fr)
+
+
 
 # ---------------- MASS MATRIX ----------------
 rho = 1200
@@ -126,7 +127,7 @@ for c in range(ne[0]):
 massMatrix = np.diag(massVector)
 
 # ---------------- EXTERNAL FORCES ----------------
-F_control = [.1, 0, 0]
+F_control = [.01, 0, 0]
 Fg = [np.zeros(ndof[0]) for _ in range(nRods)]
 for r in range(nRods):
     last_node = nv[r]-3
@@ -157,14 +158,38 @@ a2_old = [a2[r].copy() for r in range(nRods)]
 plotrod_simple(qOld[0], qOld[1], qOld[2], 0)
 
 print("enteringLoop")
+# ########################### SQUISH Q vector into 1 Q_global
+numRods = len(q)
 
+
+
+
+q_junction = qOld[0][:3]
+q[0] = qOld[0][3:]  # Remove the first 3 elements of q[1] because they will be shared with q[0] at the junction
+q[1] = qOld[1][3:]
+q[2] = qOld[2][3:]
+q_all_old = np.concatenate([q_junction, q[0], q[1], q[2]])
+
+qindex = []
+jun_index = np.arange(0,3)
+qindex.append(np.arange(len(jun_index), len(q[0])+len(jun_index))) # Get the indices of the first vector
+qindex.append(np.arange(len(jun_index)+len(qindex[0]), len(q[0])+len(q[1])+len(jun_index)))
+qindex.append(np.arange(len(jun_index)+len(qindex[0])+len(qindex[1]), len(qindex[0])+len(qindex[1]) + len(q[2])+len(jun_index)))
+
+# Get squished free index
+fixed_index = [16, 17, 18, 24, 25, 26, 36, 37, 38]
+free_all_index = np.setdiff1d(np.arange(len(q_all_old)), fixed_index)
 
 for timeStep in range(Nsteps):
+
+    # This will work by passing in qOld, uOld, which will be unpacked into q_all_old in objfun.
+    # Then, objfun will reassemble qNew from q_all_new and return qNew
+
     q_new, u_new, a1_new, a2_new = objfun(
-        qOld, uOld, a1_old, a2_old,
-        freeIndex, dt, tol, refTwist,
+        qOld, uOld, qindex, jun_index, a1_old, a2_old,
+        free_all_index, dt, tol, refTwist,
         massVector, massMatrix,
-        EA, refLen, refLenJunction,
+        EA, refLen,
         EI, GJ, vorRefLen,
         kappaBar, twistBar,
         Fg, nRods, tangent, nv[0]
