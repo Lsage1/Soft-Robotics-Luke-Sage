@@ -7,6 +7,7 @@ from computeMaterialDirectors import computeMaterialDirectors
 from getKappa import getKappa
 from objfun import objfun
 from computeKappa import computeKappa
+from objfun_test import objfun_test
 
 verts = [
     np.array([[0,0,0], [0,0.05,0], [0,0.1,-0.05], [0,0.1,-0.10]]),
@@ -88,6 +89,10 @@ for r in range(nRods):
     # Twist
     twistBar[r] = np.zeros(nv[r])
 
+###################################################################
+refLenJunction = 0.05 ######## CHANGE LATER ****
+
+
 # ---------------- FIXED/FREE DOFS ----------------
 fixedIndex = []
 freeIndex  = []
@@ -150,14 +155,16 @@ a1_old = [a1[r].copy() for r in range(nRods)]
 a2_old = [a2[r].copy() for r in range(nRods)]
 
 plotrod_simple(qOld[0], qOld[1], qOld[2], 0)
-plt.show()
+
+print("enteringLoop")
+
 
 for timeStep in range(Nsteps):
     q_new, u_new, a1_new, a2_new = objfun(
         qOld, uOld, a1_old, a2_old,
         freeIndex, dt, tol, refTwist,
         massVector, massMatrix,
-        EA, refLen,
+        EA, refLen, refLenJunction,
         EI, GJ, vorRefLen,
         kappaBar, twistBar,
         Fg, nRods, tangent, nv[0]
