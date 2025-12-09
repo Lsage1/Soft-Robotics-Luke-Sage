@@ -1,3 +1,6 @@
+import os
+
+import imageio.v2 as imageio
 import numpy as np
 import matplotlib.pyplot as plt
 from plotrod_simple import plotrod_simple
@@ -124,6 +127,8 @@ for c in range(ne[0]):
     if 4*c+3 < ndof[0]:
         massVector[4*c+3] = 0.5 * dm * r0**2
 
+
+
 massMatrix = np.diag(massVector)
 
 # ---------------- EXTERNAL FORCES ----------------
@@ -142,7 +147,7 @@ EA = Y*np.pi*r0**2
 EI = Y*np.pi*r0**4/4
 GJ = G*np.pi*r0**4/2
 dt = 0.01
-totalTime = 1.0
+totalTime = 3
 tol = EI / L**2 * 1e-3
 
 # ---------------- REFERENCE TWIST ----------------
@@ -177,8 +182,26 @@ qindex.append(np.arange(len(jun_index)+len(qindex[0]), len(q[0])+len(q[1])+len(j
 qindex.append(np.arange(len(jun_index)+len(qindex[0])+len(qindex[1]), len(qindex[0])+len(qindex[1]) + len(q[2])+len(jun_index)))
 
 # Get squished free index
-fixed_index = [16, 17, 18, 24, 25, 26, 36, 37, 38]
+fixed_index = [12, 13, 14], #24, 25, 26, 36, 37, 38]
+
 free_all_index = np.setdiff1d(np.arange(len(q_all_old)), fixed_index)
+
+print(q_all_old)
+
+# Get Squished force index
+force_index = [6, 18, 30]
+force_amounts = [0.001, 0.00, 0.00]
+ext_force_flat = np.zeros(len(q_all_old))
+ext_force_flat[force_index] = force_amounts
+
+# Get Squished Mass Vector: NOTE ASSUMES ALL BRANCHES HAVE THE SAME MASS
+mass_flat = np.concatenate([massVector[:3], massVector[3:], massVector[3:], massVector[3:]])
+mass_matrix_flat = np.diag(mass_flat)
+
+#  Create image folder if none exists
+image_folder = "images"
+os.makedirs(image_folder, exist_ok=True)
+frame_files = []
 
 for timeStep in range(Nsteps):
 
@@ -188,19 +211,34 @@ for timeStep in range(Nsteps):
     q_new, u_new, a1_new, a2_new = objfun(
         qOld, uOld, qindex, jun_index, a1_old, a2_old,
         free_all_index, dt, tol, refTwist,
-        massVector, massMatrix,
+        mass_flat, mass_matrix_flat,
         EA, refLen,
         EI, GJ, vorRefLen,
         kappaBar, twistBar,
-        Fg, nRods, tangent, nv[0]
+        ext_force_flat, nRods, tangent, nv[0]
     )
 
-    if timeStep % 10 == 0:
-        plotrod_simple(q_new[0], q_new[1], q_new[2], ctime)
+    # Plot the shell
+    if timeStep % 10 == 1:
+        plotrod_simple(qOld[0], qOld[1], qOld[2], ctime)
+        # Save frame as image
+        frame_path = os.path.join(image_folder, f"frame_{timeStep:05d}.png")
+        plt.savefig(frame_path, dpi=150)
+        frame_files.append(frame_path)
         plt.show()
+        # plt.close()
 
     ctime += dt
     qOld = [q.copy() for q in q_new]
     uOld = [u.copy() for u in u_new]
     a1_old = [a.copy() for a in a1_new]
     a2_old = [a.copy() for a in a2_new]
+
+
+# --- Assemble video from saved frames ---
+video_path = "simulation.mp4"
+with imageio.get_writer(video_path, fps=20) as writer:
+    for filename in frame_files:
+        writer.append_data(imageio.imread(filename))
+
+print(f"Video saved to {video_path}")
