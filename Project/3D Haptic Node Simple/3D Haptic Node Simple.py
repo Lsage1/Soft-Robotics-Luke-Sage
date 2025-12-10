@@ -207,7 +207,7 @@ print(q_all_old)
 
 # Get Squished force index
 force_index = [6, 18, 30]
-force_amounts = [0.001, 0.001, 0.001]
+force_amounts = [0.00, 0.00, 0.001]
 ext_force_flat = np.zeros(len(q_all_old))
 ext_force_flat[force_index] = force_amounts
 

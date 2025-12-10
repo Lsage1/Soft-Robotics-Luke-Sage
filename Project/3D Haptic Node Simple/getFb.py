@@ -45,10 +45,6 @@ def getFb(q_all_new, qindex, m1, m2, kappaBar, kappa_junction, EI, voronoiRefLen
   Fb[ind] -= dF
   Jb[np.ix_(ind, ind)] -= dJ
 
-
-
-
-
   for i in range(1,3):
       # From the junction to the first node in each branch
       node0 = q_all_new[0:3]

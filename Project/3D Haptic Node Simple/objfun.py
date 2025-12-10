@@ -95,7 +95,7 @@ def objfun(qOld, uOld, qindex, jun_index, a1_old, a2_old,
     Fv = - visc * (q_all_new - q_all_old) / dt
     Jv = - visc / dt * np.eye(ndof)
 
-    Forces = Fs + f_ext_flat + Fb #+ Fv #+ Ft[c]
+    Forces = Fs + f_ext_flat + Fb # + Fv #+ Ft[c]
     JForces = Js + Jb #+ Jv  #+ Jt
 
 
