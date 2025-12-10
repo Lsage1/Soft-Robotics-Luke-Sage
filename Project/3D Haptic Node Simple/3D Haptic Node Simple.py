@@ -1,5 +1,5 @@
 import os
-
+from getKappa_Junction import getKappa_Junction
 import imageio.v2 as imageio
 import numpy as np
 import matplotlib.pyplot as plt
@@ -64,19 +64,32 @@ for r in range(nRods):
         else:
             vorRefLen[r][c] = 0.5 * (refLen[r][c-1] + refLen[r][c])
 
+
     # Tangents
+
     tangent[r] = computeTangent(qOld[r])
 
-    # Initial a1 direction
-    t0 = tangent[r][0]
-    arb = np.array([0,0,-1])
-    cross = np.cross(t0, arb)
-    if np.linalg.norm(cross) < 1e-3:
-        arb = np.array([0,1,0])
-        cross = np.cross(t0, arb)
-    a1_first = cross / np.linalg.norm(cross)
+    # Initial a1 direction using parallel transport from the junction
+    t0 = [0,-1,0]  # junction tangent
+    a1_root = [1,0,0]
+    t1 = tangent[r][0]  # first tangent of branch r
 
-    # Space parallel transport
+    # Project parent a1_root into the plane perpendicular to t1
+    a1_first = a1_root - np.dot(a1_root, t1) * t1
+
+    # Normalize, with fallback for degeneracy
+    n = np.linalg.norm(a1_first)
+    if n < 1e-3:
+        # fallback if a1_root was almost parallel to t1
+        arb = np.array([1.0, 0.0, 0.0])
+        if abs(np.dot(arb, t1)) > 0.9:
+            arb = np.array([0.0, 1.0, 0.0])
+        a1_first = np.cross(t1, arb)
+        a1_first /= np.linalg.norm(a1_first)
+    else:
+        a1_first /= n
+
+    # Space parallel transport along the branch (your existing function)
     a1[r], a2[r] = computeSpaceParallel(a1_first, qOld[r])
 
     # Theta edges
@@ -91,6 +104,9 @@ for r in range(nRods):
 
     # Twist
     twistBar[r] = np.zeros(nv[r])
+
+# Get curvature between junction nodes:
+kappa_junction = getKappa_Junction(q, m1, m2)
 
 ###################################################################
 
@@ -132,7 +148,7 @@ for c in range(ne[0]):
 massMatrix = np.diag(massVector)
 
 # ---------------- EXTERNAL FORCES ----------------
-F_control = [.01, 0, 0]
+F_control = [0, 0, 0]
 Fg = [np.zeros(ndof[0]) for _ in range(nRods)]
 for r in range(nRods):
     last_node = nv[r]-3
@@ -166,7 +182,8 @@ print("enteringLoop")
 # ########################### SQUISH Q vector into 1 Q_global
 numRods = len(q)
 
-
+#### VISCOSITY
+visc = 0
 
 
 q_junction = qOld[0][:3]
@@ -182,7 +199,7 @@ qindex.append(np.arange(len(jun_index)+len(qindex[0]), len(q[0])+len(q[1])+len(j
 qindex.append(np.arange(len(jun_index)+len(qindex[0])+len(qindex[1]), len(qindex[0])+len(qindex[1]) + len(q[2])+len(jun_index)))
 
 # Get squished free index
-fixed_index = [12, 13, 14], #24, 25, 26, 36, 37, 38]
+fixed_index = [12, 13, 14] #, 24, 25, 26]#, 36, 37, 38]
 
 free_all_index = np.setdiff1d(np.arange(len(q_all_old)), fixed_index)
 
@@ -190,7 +207,7 @@ print(q_all_old)
 
 # Get Squished force index
 force_index = [6, 18, 30]
-force_amounts = [0.001, 0.00, 0.00]
+force_amounts = [0.001, 0.001, 0.001]
 ext_force_flat = np.zeros(len(q_all_old))
 ext_force_flat[force_index] = force_amounts
 
@@ -214,19 +231,18 @@ for timeStep in range(Nsteps):
         mass_flat, mass_matrix_flat,
         EA, refLen,
         EI, GJ, vorRefLen,
-        kappaBar, twistBar,
-        ext_force_flat, nRods, tangent, nv[0]
+        kappaBar, kappa_junction, twistBar,
+        ext_force_flat, nRods, tangent, nv[0], visc
     )
 
     # Plot the shell
-    if timeStep % 10 == 1:
+    if timeStep % 2 == 1:
         plotrod_simple(qOld[0], qOld[1], qOld[2], ctime)
         # Save frame as image
         frame_path = os.path.join(image_folder, f"frame_{timeStep:05d}.png")
         plt.savefig(frame_path, dpi=150)
         frame_files.append(frame_path)
         plt.show()
-        # plt.close()
 
     ctime += dt
     qOld = [q.copy() for q in q_new]

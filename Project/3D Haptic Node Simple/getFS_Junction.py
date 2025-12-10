@@ -14,7 +14,6 @@ def getFS_Junction(q_all_new, EA, refLen, jun_index, index, numRods, nv):
   Fs = np.zeros(ndof)
   Js = np.zeros((ndof, ndof))
 
-  print(q_all_new)
 
   for i in range(numRods):
     ## -- TAKE CARE OF JUNCTION FIRST --

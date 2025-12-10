@@ -15,9 +15,9 @@ def objfun(qOld, uOld, qindex, jun_index, a1_old, a2_old,
            massVector, massMatrix,
            EA, refLen,
            EI, GJ, voronoiRefLen,
-           kappaBar, twistBar,
-           f_ext_flat, nRods, tangent_old, nv # NV is the number of vertices in an edge
-           ):
+           kappaBar, kappa_junction, twistBar,
+           f_ext_flat, nRods, tangent_old, nv, # NV is the number of vertices in an edge
+           visc):
   print("objfun called")
 
   qNew = [qOld[i].copy() for i in range(nRods)]
@@ -88,11 +88,18 @@ def objfun(qOld, uOld, qindex, jun_index, a1_old, a2_old,
 
     Fs, Js = getFS_Junction(q_all_new, EA, refLen, jun_index, qindex, nRods, nv)
 
-    #Fb, Jb = getFb(q_new[c], m1[c], m2[c], kappaBar[c], EI, voronoiRefLen[c])
+    Fb, Jb = getFb(q_all_new, qindex, m1, m2, kappaBar, kappa_junction, EI, voronoiRefLen, ne)
+
     #Ft[c], Jt[c] = getFt(q_new[c], refTwist_new[c], twistBar[c], GJ, voronoiRefLen[c])
 
-    Forces = Fs + f_ext_flat # + Fb[c] + Ft[c]
-    JForces = Js # + Jb + Jt
+    Fv = - visc * (q_all_new - q_all_old) / dt
+    Jv = - visc / dt * np.eye(ndof)
+
+    Forces = Fs + f_ext_flat + Fb #+ Fv #+ Ft[c]
+    JForces = Js + Jb #+ Jv  #+ Jt
+
+
+
     F = massVector / dt * ((q_all_new - q_all_old) / dt - u_all_old) - Forces
     J = massMatrix / dt**2 - JForces
 
