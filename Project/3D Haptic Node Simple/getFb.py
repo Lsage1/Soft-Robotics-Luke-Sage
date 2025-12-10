@@ -17,7 +17,7 @@ def getFb(q_all_new, qindex, m1, m2, kappaBar, kappa_junction, EI, voronoiRefLen
   curvature0 = kappa_junction[0]
   dL = 0.5 * (voronoiRefLen[0][0] + voronoiRefLen[1][0])
   dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
-  ind = np.concatenate([qindex[0][1:5],[0,1,2,3], qindex[1][1:4]])
+  ind = np.concatenate([qindex[0][1:5],[0,1,2], qindex[1][0:4]])
   Fb[ind] -= dF
   Jb[np.ix_(ind, ind)] -= dJ
 
@@ -29,7 +29,7 @@ def getFb(q_all_new, qindex, m1, m2, kappaBar, kappa_junction, EI, voronoiRefLen
   curvature0 = kappa_junction[1]
   dL = 0.5 * (voronoiRefLen[1][0] + voronoiRefLen[2][0])
   dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
-  ind = np.concatenate([qindex[1][1:5], [0, 1, 2 ,3], qindex[2][1:4]])
+  ind = np.concatenate([qindex[1][1:5], [0, 1, 2], qindex[2][0:4]])
   Fb[ind] -= dF
   Jb[np.ix_(ind, ind)] -= dJ
 
@@ -41,24 +41,24 @@ def getFb(q_all_new, qindex, m1, m2, kappaBar, kappa_junction, EI, voronoiRefLen
   curvature0 = kappa_junction[2]
   dL = 0.5 * (voronoiRefLen[2][0] + voronoiRefLen[0][0])
   dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
-  ind = np.concatenate([qindex[2][1:5], [0, 1, 2, 3], qindex[0][1:4]])
+  ind = np.concatenate([qindex[2][1:5], [0, 1, 2], qindex[0][0:4]])
   Fb[ind] -= dF
   Jb[np.ix_(ind, ind)] -= dJ
 
   for i in range(1,3):
-      # From the junction to the first node in each branch
-      node0 = q_all_new[0:3]
-      node1 = q_all_new[qindex[i][1 : 4]]
-      node2 = q_all_new[qindex[i][5 : 8]]
-
-      m1e, m2e = m1[i][0], m2[i][0]
-      m1f, m2f = m1[i][1], m2[i][1]
-      dL = voronoiRefLen[i][1]
-      curvature0 = kappaBar[i][1]
-      dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
-      ind = np.concatenate([[0, 1, 2, 3], qindex[i][1 : 5], qindex[i][5 : 8]])
-      Fb[ind] -= dF
-      Jb[np.ix_(ind, ind)] -= dJ
+      # # From the junction to the first node in each branch
+      # node0 = q_all_new[0:3]
+      # node1 = q_all_new[qindex[i][1 : 4]]
+      # node2 = q_all_new[qindex[i][5 : 8]]
+      #
+      # m1e, m2e = m1[i][0], m2[i][0]
+      # m1f, m2f = m1[i][1], m2[i][1]
+      # dL = voronoiRefLen[i][1]
+      # curvature0 = kappaBar[i][1]
+      # dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
+      # ind = np.concatenate([[0, 1, 2], qindex[i][0 : 5], qindex[i][5 : 8]])
+      # Fb[ind] -= dF
+      # Jb[np.ix_(ind, ind)] -= dJ
 
       for c in range(ne-2): # Ignore the terminal nodes (0 and nv)
 
@@ -74,8 +74,13 @@ def getFb(q_all_new, qindex, m1, m2, kappaBar, kappa_junction, EI, voronoiRefLen
           curvature0 = kappaBar[i][c+2]
 
           dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
-          ind = np.concatenate([qindex[i][1 : 5],qindex[i][5 : 9], qindex[i][9 : 12]])
 
+
+          ind = np.concatenate([
+              qindex[i][4 * c + 1: 4 * c +5],
+              qindex[i][4 * c + 5: 4 * c + 9],
+              qindex[i][4 * c + 9: 4 * c + 12]
+          ])
           Fb[ind] -= dF
           Jb[np.ix_(ind, ind)] -= dJ
 
