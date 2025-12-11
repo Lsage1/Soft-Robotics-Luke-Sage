@@ -1,6 +1,7 @@
 import numpy as np
 from gradEb_hessEb import gradEb_hessEb
 from PlotRodNetwork import PlotRodNetwork
+import matplotlib.pyplot as plt
 
 def getFb_OO_tree(root_edge, root_vertex, edgeObjs, vertexObjs, EI, ndof_total):
     print("computing bending")
@@ -24,6 +25,7 @@ def getFb_OO_tree(root_edge, root_vertex, edgeObjs, vertexObjs, EI, ndof_total):
     # Reset handled flags
     for e in edgeObjs:
         e.handled = False
+        print(e.children)
     # Start recursion
     _tree_bending_recursive(root_edge, root_vertex, vertexObjs, edgeObjs, Fb, Jb, EI)
 
@@ -38,10 +40,12 @@ def _tree_bending_recursive(edge_in, v_in, vertexObjs, edgeObjs, Fb, Jb, EI):
     Recursive function to traverse tree and assemble bending forces and Jacobians.
     """
     edge_in.handled = True
-    PlotRodNetwork(vertexObjs, edgeObjs, [v_in], [edge_in])
+    PlotRodNetwork(edgeObjs, vertexObjs, [v_in], [edge_in])#, extra_vertices=v_in, extra_edges=edge_in)
+    plt.show()
 
     # Junction bending
     if v_in.junction:
+        print("Junction")
         for edgePair, kappa_j in zip(v_in.edgePairs, v_in.kappa_junction):
             edge0, edge1 = edgePair
             node0 = edge0.get_other_vertex(v_in).coords
@@ -67,6 +71,7 @@ def _tree_bending_recursive(edge_in, v_in, vertexObjs, edgeObjs, Fb, Jb, EI):
 
     # Edge internal bending (ignore ends)
     if edge_in.is_internal():
+        print("Internal")
         v0 = edge_in.prev_vertex(v_in).coords
         v1 = v_in.coords
         v2 = edge_in.next_vertex(v_in).coords
@@ -80,9 +85,12 @@ def _tree_bending_recursive(edge_in, v_in, vertexObjs, edgeObjs, Fb, Jb, EI):
         ind = np.concatenate([edge_in.vertex1.index, edge_in.vertex2.index, v_in.index])
         Fb[ind] -= dF
         Jb[np.ix_(ind, ind)] -= dJ
-
+    else:
+        print("end")
     # Traverse children edges
+    print(edge_in.children)
     for edge_out in edge_in.children:
+        print("edge_out:", edge_out)
         if not edge_out.handled:
             v_next = edge_out.get_other_vertex(v_in)
             _tree_bending_recursive(edge_out, v_next, vertexObjs, edgeObjs, Fb, Jb, EI)

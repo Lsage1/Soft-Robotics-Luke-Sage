@@ -53,17 +53,22 @@ def tree_getKappa(edge_in, v_in, vertexObjs, edgeObjs):
         v_next = edge_out.get_other_vertex(v_in)
         v_prev = edge_in.get_other_vertex(v_in)  # previous vertex for curvature
 
+
         # Compute curvature
         getKappa_OO(v_prev, v_in, v_next, edge_in, edge_out)
         v_in.rest_kappa = v_in.kappa
 
+        # Add Children / Parents
+        edge_in.children.append(edge_out)
+        edge_out.parent = edge_in
+        print("assigned Children")
+        print(edge_out.children)
         # Allocate ref_twist if branching
         unhandled_children = [e for e in v_in.edges if not e.handled and e is not edge_in]
         if len(unhandled_children) >= 1:
             v_in.ref_twist = np.zeros(len(unhandled_children))
 
         edge_out.handled = True
-        edge_out.root = edge_in
 
         # Optional visualization
         #PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)
