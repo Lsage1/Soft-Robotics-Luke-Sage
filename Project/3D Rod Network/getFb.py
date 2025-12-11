@@ -1,35 +1,108 @@
 import numpy as np
 from gradEb_hessEb import gradEb_hessEb
 
-def getFb(q, m1, m2, kappaBar, EI, voronoiRefLen):
-  # BENDING
-  # Input q is a DOF vector of size 4*nv - 1
-  ndof = len(q)
-  nv = (ndof + 1) // 4
-  ne = nv - 1
+def getFb_OO_tree(root_edge, root_vertex, EI, ndof_total):
+    """
+    Compute bending forces and Jacobian by recursively traversing the tree.
 
-  Fb = np.zeros(ndof)
-  Jb = np.zeros((ndof, ndof))
+    Args:
+        root_edge: EdgeObj at the start of the tree (root).
+        root_vertex: VertexObj at the start of the tree.
+        EI: bending stiffness
+        ndof_total: total number of DOFs in the system
 
-  # Loop over each bending spring
-  for c in range(1, ne): # Ignore the terminal nodes (0 and nv)
-    node0 = q[4 * (c - 1) : 4 * (c - 1) + 3] # (c-1)-th node
-    node1 = q[4 * c : 4*c + 3] # c-th node
-    node2 = q[4 * (c + 1) : 4 * (c + 1) + 3] # (c+1)-th node
-    # Calculate bending force due to the turning at the c-th node
+    Returns:
+        Fb: global bending force vector (size = ndof_total)
+        Jb: global bending Jacobian (size = ndof_total x ndof_total)
+    """
 
-    m1e = m1[c - 1, 0:3]
-    m2e = m2[c - 1, 0:3]
-    m1f = m1[c,  0:3]
-    m2f = m2[c,  0:3]
+    Fb = np.zeros(ndof_total)
+    Jb = np.zeros((ndof_total, ndof_total))
 
-    dL = voronoiRefLen[c]
-    curvature0 = kappaBar[c, 0:2]
+    # Reset handled flags
+    for e in collect_all_edges(root_edge):
+        e.handled = False
 
-    dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
-    ind = np.array([4*c-4, 4*c-3, 4*c-2, 4*c-1,4*c, 4*c+1, 4*c+2, 4*c+3, 4*c+4, 4*c+5, 4*c+6])
+    # Start recursion
+    _tree_bending_recursive(root_edge, root_vertex, Fb, Jb, EI)
 
-    Fb[ind] -= dF
-    Jb[np.ix_(ind, ind)] -= dJ
+    # Sanity check
+    assert Fb.shape[0] == ndof_total, "Fb vector length mismatch!"
 
-  return Fb, Jb
+    return Fb, Jb
+
+
+def _tree_bending_recursive(edge_in, v_in, Fb, Jb, EI):
+    """
+    Recursive function to traverse tree and assemble bending forces and Jacobians.
+    """
+    edge_in.handled = True
+
+    # Junction bending
+    if v_in.junction:
+        for edgePair, kappa_j in zip(v_in.edgePairs, v_in.kappa_junction):
+            edge0, edge1 = edgePair
+            node0 = edge0.get_other_vertex(v_in).coords
+            node1 = v_in.coords
+            node2 = edge1.get_other_vertex(v_in).coords
+
+            # Material directors
+            m1e, m2e = edge0.m1, edge0.m2
+            m1f, m2f = edge1.m1, edge1.m2
+
+            # Voronoi length
+            dL = 0.5 * (edge0.voronoi_length + edge1.voronoi_length)
+
+            # Compute force and Jacobian
+            dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, kappa_j, dL, EI)
+
+            # Assemble global indices
+            ind = np.concatenate([edge0.vertex1.index, edge0.vertex2.index,
+                                  v_in.index,
+                                  edge1.vertex1.index, edge1.vertex2.index])
+            Fb[ind] -= dF
+            Jb[np.ix_(ind, ind)] -= dJ
+
+    # Edge internal bending (ignore ends)
+    if edge_in.is_internal():
+        v0 = edge_in.prev_vertex(v_in).coords
+        v1 = v_in.coords
+        v2 = edge_in.next_vertex(v_in).coords
+
+        m1e, m2e = edge_in.m1, edge_in.m2
+        m1f, m2f = edge_in.m1_next, edge_in.m2_next
+        dL = edge_in.voronoi_length
+        curvature0 = edge_in.kappa
+
+        dF, dJ = gradEb_hessEb(v0, v1, v2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
+        ind = np.concatenate([edge_in.vertex1.index, edge_in.vertex2.index, v_in.index])
+        Fb[ind] -= dF
+        Jb[np.ix_(ind, ind)] -= dJ
+
+    # Traverse children edges
+    for edge_out in edge_in.children:
+        if not edge_out.handled:
+            v_next = edge_out.get_other_vertex(v_in)
+            _tree_bending_recursive(edge_out, v_next, Fb, Jb, EI)
+
+
+# Utility functions to collect all edges/vertices in a branch
+def collect_all_edges(root_edge):
+    edges = []
+
+    def _rec(e):
+        if e not in edges:
+            edges.append(e)
+            for child in e.children:
+                _rec(child)
+
+    _rec(root_edge)
+    return edges
+
+
+def collect_all_vertices(root_edge):
+    vertices = set()
+    for e in collect_all_edges(root_edge):
+        vertices.add(e.vertex1)
+        vertices.add(e.vertex2)
+    return list(vertices)

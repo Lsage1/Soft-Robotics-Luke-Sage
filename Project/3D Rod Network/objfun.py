@@ -4,12 +4,12 @@ from computeTangent import computeTangent
 from getRefTwist import getRefTwist
 from computeMaterialDirectors import computeMaterialDirectors
 from getFs import getFs
-from getFb import getFb
 from getFt import getFt
 from computeTimeParallel_OO import computeTimeParallel_OO
 from ComputeTangentEdges import ComputeTangentEdges
 from getRefTwist_OO import getRefTwist_OO
 from computeMaterialDirectors_OO import computeMaterialDirectors_OO
+from getFb import getFb_OO_tree
 
 def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
             qOld, uOld,
@@ -47,10 +47,10 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
 
     # Computer elastic forces
     Fs, Js = getFs(EA, vertexObjs, edgeObjs)
-    #Fb, Jb = getFb(q_new, m1, m2, kappaBar, EI, voronoiRefLen)
+    Fb, Jb = getFb_OO_tree(end_edge, first_end_vertex, EI, ndof_total=len(q_new))
+    print(Fb)
     #Ft, Jt = getFt(q_new, refTwist_new, twistBar, GJ, voronoiRefLen)
-    print("force: ", Fs)
-    Forces = Fs + Fg#+ Fb + Ft + Fg
+    Forces = Fs + Fg+ Fb #+ Ft + Fg
     JForces = Js #+ Jb + Jt
 
     f = massVector / dt * ( (q_new - qOld) / dt - uOld ) - Forces

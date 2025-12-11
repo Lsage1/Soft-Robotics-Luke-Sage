@@ -99,7 +99,7 @@ G = Y / ( 2 * (1 + nu)) # Shear modulus
 
 # Stiffness variables **** NOTE: MAKE THIS VERTEX OR EDGE BASED
 EA = Y * np.pi * r0**2 # Stretching stiffness
-EI = Y * np.pi * r0**4 / 4.0 # Bending stiffness
+EI = Y * np.pi * r0**4 / 4.0 * 100 # Bending stiffness
 GJ = G * np.pi * r0**4 / 2.0 # Twisting stiffness
 
 # TIME PARAMETERS
@@ -132,7 +132,9 @@ for edge in edgeObjs:
 print(len(qOld_tr), "Translational Degrees of Freedom")
 print(len(qOld_rot), "Rotational Degrees of Freedom")
 
-
+for edge in edgeObjs:
+    if edge.vertex1.end is True:
+        edge.is_internal
 
 first_end_vertex = next(v for v in vertexObjs if v.end) # Get the first vertex with an end
 end_edge = first_end_vertex.edges[0] # This vertex is an end, so it has one edge, which will be the first in its list
@@ -209,7 +211,7 @@ massMatrix = np.diag(massVector)
 # ################### External Force: Point Loads ##################
 
 F_end = 0.1 # CHANGE LATER
-vectorLoad = np.array([0, 0, -0.001]) # Point load vector
+vectorLoad = np.array([0, 0, -0.0001]) # Point load vector
 
 Fg = np.zeros(ndof) # External force vector
 vertexObjs[2].f_ext = vectorLoad
@@ -219,7 +221,7 @@ for v in vertexObjs:
 
 ############### BOUNDARY CONDITIONS ####################
 # Set up boundary conditions: Index of fixed degrees of freedom. Form: [[VertexIndex, [X, Y, Z]]...]
-vertexObjs[0].fix([True, True, True])
+vertexObjs[4].fix([True, True, True])
 # Index of edges with fixed rotation. NOTE: Currently no edges have fixed rotation.
 edgeObjs[0].twist_fixed = True
 
@@ -261,6 +263,8 @@ for edge in edgeObjs:
 image_folder = "images"
 os.makedirs(image_folder, exist_ok=True)
 frame_files = []
+
+
 
 print("entering Loop")
 for timeStep in range(Nsteps):

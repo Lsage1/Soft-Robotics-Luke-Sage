@@ -88,6 +88,12 @@ class EdgeObj:
         else:
             return self.vertex1
 
+    def is_internal(self):
+        """
+        Returns True if the edge is internal (both vertices are not ends).
+        """
+        return not self.vertex1.end and not self.vertex2.end
+
     def get_branch_number(self):
         parent = self.parent
         if parent is None:
