@@ -47,12 +47,12 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
 
     # Computer elastic forces
     Fs, Js = getFs(EA, vertexObjs, edgeObjs)
-    Fb, Jb = getFb_OO_tree(end_edge, first_end_vertex, EI, ndof_total=len(q_new))
-    print(Fb)
-    #Ft, Jt = getFt(q_new, refTwist_new, twistBar, GJ, voronoiRefLen)
-    Forces = Fs + Fg+ Fb #+ Ft + Fg
+    Fb, Jb = getFb_OO_tree(end_edge, first_end_vertex, vertexObjs, edgeObjs, EI, ndof_total=len(q_new))
+    #Ft, Jt = getFt(q_new, refTwist_new, twistBar, edgeObjs, VertexObjs GJ, voronoiRefLen)
+    print("FB:", Fb)
+    Forces = Fs + Fg #+ Ft + Fg
     JForces = Js #+ Jb + Jt
-
+    quit()
     f = massVector / dt * ( (q_new - qOld) / dt - uOld ) - Forces
     J = massMatrix / dt**2 - JForces
 

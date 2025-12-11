@@ -293,6 +293,9 @@ for timeStep in range(Nsteps):
       frame_files.append(frame_path)
       plt.close()
 
+  if timeStep % 10 == 1:
+      PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)      # Save frame as image
+      plt.show()
 
   # Old parameters become new
   for edge in edgeObjs:

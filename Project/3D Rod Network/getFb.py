@@ -1,7 +1,9 @@
 import numpy as np
 from gradEb_hessEb import gradEb_hessEb
+from PlotRodNetwork import PlotRodNetwork
 
-def getFb_OO_tree(root_edge, root_vertex, EI, ndof_total):
+def getFb_OO_tree(root_edge, root_vertex, edgeObjs, vertexObjs, EI, ndof_total):
+    print("computing bending")
     """
     Compute bending forces and Jacobian by recursively traversing the tree.
 
@@ -20,11 +22,10 @@ def getFb_OO_tree(root_edge, root_vertex, EI, ndof_total):
     Jb = np.zeros((ndof_total, ndof_total))
 
     # Reset handled flags
-    for e in collect_all_edges(root_edge):
+    for e in edgeObjs:
         e.handled = False
-
     # Start recursion
-    _tree_bending_recursive(root_edge, root_vertex, Fb, Jb, EI)
+    _tree_bending_recursive(root_edge, root_vertex, vertexObjs, edgeObjs, Fb, Jb, EI)
 
     # Sanity check
     assert Fb.shape[0] == ndof_total, "Fb vector length mismatch!"
@@ -32,11 +33,12 @@ def getFb_OO_tree(root_edge, root_vertex, EI, ndof_total):
     return Fb, Jb
 
 
-def _tree_bending_recursive(edge_in, v_in, Fb, Jb, EI):
+def _tree_bending_recursive(edge_in, v_in, vertexObjs, edgeObjs, Fb, Jb, EI):
     """
     Recursive function to traverse tree and assemble bending forces and Jacobians.
     """
     edge_in.handled = True
+    PlotRodNetwork(vertexObjs, edgeObjs, [v_in], [edge_in])
 
     # Junction bending
     if v_in.junction:
@@ -83,26 +85,10 @@ def _tree_bending_recursive(edge_in, v_in, Fb, Jb, EI):
     for edge_out in edge_in.children:
         if not edge_out.handled:
             v_next = edge_out.get_other_vertex(v_in)
-            _tree_bending_recursive(edge_out, v_next, Fb, Jb, EI)
+            _tree_bending_recursive(edge_out, v_next, vertexObjs, edgeObjs, Fb, Jb, EI)
 
 
-# Utility functions to collect all edges/vertices in a branch
-def collect_all_edges(root_edge):
-    edges = []
-
-    def _rec(e):
-        if e not in edges:
-            edges.append(e)
-            for child in e.children:
-                _rec(child)
-
-    _rec(root_edge)
-    return edges
 
 
-def collect_all_vertices(root_edge):
-    vertices = set()
-    for e in collect_all_edges(root_edge):
-        vertices.add(e.vertex1)
-        vertices.add(e.vertex2)
-    return list(vertices)
+
+
