@@ -3,71 +3,53 @@ from computeReferenceTwist import computeReferenceTwist
 from PlotRodNetwork import PlotRodNetwork
 
 def getRefTwist_OO(vertexObjs, edgeObjs, end_edge, first_end_vertex):
+    # Reset handled flags
+    for e in edgeObjs:
+        e.handled = False
 
-    # Given all the reference frames along the rod, we calculate the reference
-    # twist along the rod on every node.
-    # Will calculate referenceTwist for all internal nodes (all nodes except terminal nodes
 
 
-    for edge in edgeObjs:
-        edge.handled = False
-    activeJunction = []
-    tree_search_active = True
-    edge01 = end_edge
-    vertex0 = first_end_vertex
-    print("GettingRefTwist")
+    # Start recursion
+    tree_getRefTwist(end_edge, first_end_vertex, vertexObjs, edgeObjs)
 
-    while tree_search_active:
-        vertex1 = edge01.get_other_vertex(vertex0)
-        # Only add junction if it hasn't been added yet
-        if vertex1.junction:
-            # Get all outgoing edges except the one we came from
-            remaining = [e for e in vertex1.edges if (not e.handled and e is not edge01)]
+def tree_getRefTwist(edge_in, v_in, vertexObjs, edgeObjs):
+    """
+    Recursive computation of reference twist.
+    edge_in : edge we arrived on
+    v_in    : vertex we arrived at
+    """
+    edge_in.handled = True
 
-            # Only push the junction if it has future branches
-            if len(remaining) > 0 and all(j[0] != vertex1 for j in activeJunction):
-                activeJunction.append([vertex1, edge01])
+    # For each child edge
+    for edge_out in edge_in.children:
 
-        edge12, found_edge = vertex1.get_unhandled_edge(edge01)
+        if edge_out.handled:
+            continue
 
-        if not found_edge:
-            if len(activeJunction) > 0:
-                #print("hit an end!")
-                # Backtrack through junctions until we find one with unhandled edges
-                while len(activeJunction) > 0:
-                    vertex1, edge01 = activeJunction[-1]  # Most recent junction
-                    edge12, found_edge = vertex1.get_unhandled_edge(edge01)
-                    if found_edge:
-                        vertex0 = edge01.get_other_vertex(vertex1)
-                        break  # Found an edge, exit backtracking
-                    else:
-                        activeJunction.pop()  # No edges left at this junction, remove it
-                else:
-                    # If we exhausted all junctions
-                    #print("No edge found! Assuming tree is finished")
-                    break
+        v_curr = v_in
+        v_next = edge_out.get_other_vertex(v_curr)
 
-            else:
-                print("No edge found! Assuming tree is finished")
-                break
+        # --- Compute reference twist for this branch ---
+        a1e = edge_in.a1
+        a1f = edge_out.a1
+        t1  = edge_in.tangent
+        t2  = edge_out.tangent
 
-        PlotRodNetwork(vertexObjs, edgeObjs, [], [edge01, edge12])
+        branch_idx = edge_out.get_branch_number()
 
-        # Make sure every edge knows the edge it came from. This will be used to calculate twisting between beams
-        edge12.root = edge01
-        vertex2 = edge12.get_other_vertex(vertex1)
+        # Ensure reference twist vector is initialized
+        if v_curr.ref_twist is None or len(v_curr.ref_twist) < len(edge_in.children):
+            v_curr.ref_twist = np.zeros(len(edge_in.children))
 
-        # Compute reference twist:
-        a1e = edge01.a1
-        a1f = edge12.a1
-        t1 = edge01.tangent
-        t2 = edge12.tangent
-        child_index = edge12.get_branch_number()
-        print("vertex1 reference twist", vertex1.ref_twist, edge01.children)
-        vertex1.ref_twist[child_index] = computeReferenceTwist(a1e, a1f, t1, t2, vertex1.ref_twist[child_index])
+        v_curr.ref_twist[branch_idx] = computeReferenceTwist(
+            a1e, a1f, t1, t2, v_curr.ref_twist[branch_idx]
+        )
 
-        # Move on to next edge and vertex
-        edge12.handled = True
-        edge01 = edge12
-        vertex0 = vertex1
-        vertex1 = vertex2
+        # Optional: for debugging / visualization
+        # PlotRodNetwork(vertexObjs, edgeObjs, [], [edge_in, edge_out])
+
+        # Mark and recurse
+        edge_out.root = edge_in
+        edge_out.handled = True
+        tree_getRefTwist(edge_out, v_next, vertexObjs, edgeObjs)
+

@@ -164,7 +164,7 @@ EI = Y*np.pi*r0**4/4
 GJ = G*np.pi*r0**4/2
 dt = 0.01
 totalTime = 3
-tol = EI / L**2 * 1e-3
+tol = EI / L**2 * 1e-6
 
 # ---------------- REFERENCE TWIST ----------------
 refTwist = [np.zeros(nv[r]) for r in range(nRods)]

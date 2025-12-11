@@ -1,27 +1,42 @@
 import numpy as np
 from gradEs_hessEs import gradEs_hessEs
 
-def getFs(q, EA, refLen):
-  # STRETCHING
-  # Input q is a DOF vector of size 4*nv - 1
-  # Output is the stretching force vector (size 4*nv-1) and it's gradient w.r.t. q (square matrix)
-  ndof = len(q)
-  nv = (ndof + 1) // 4
-  ne = nv - 1
+import numpy as np
+from gradEs_hessEs import gradEs_hessEs
 
-  Fs = np.zeros(ndof)
-  Js = np.zeros((ndof, ndof))
+def getFs(EA, vertexObjs, edgeObjs):
+    """
+    Compute stretching forces and Jacobian using OO data structures.
+    EA is a scalar (same EA for all edges).
+    """
+    ndof = len(vertexObjs) * 3 + len(edgeObjs)     # translation DOFs + twist DOFs
+    Fs = np.zeros(ndof)
+    Js = np.zeros((ndof, ndof))
 
-  # Loop over each stretching spring
-  for c in range(ne):
-    xa = q[4 * c : 4 * c + 3]
-    xb = q[4 * c + 4 : 4 * c + 7]
-    ind = np.array([4*c, 4*c+1, 4*c+2, 4*c+4, 4*c+5, 4*c+6])
-    dL = refLen[c]
+    for edge in edgeObjs:
 
-    dF, dJ = gradEs_hessEs(xa, xb, dL, EA)
+        # Vertex positions
+        xa = np.array(edge.vertex1.coords)
+        xb = np.array(edge.vertex2.coords)
 
-    Fs[ind] -= dF
-    Js[np.ix_(ind, ind)] -= dJ
+        # DOF indices (already stored)
+        ia = edge.vertex1.index   # [i, i+1, i+2]
+        ib = edge.vertex2.index   # [j, j+1, j+2]
 
-  return Fs, Js
+        # Combined list of 6 DOFs
+        ind = np.array([ia[0], ia[1], ia[2],
+                        ib[0], ib[1], ib[2]])
+
+        # Rest length
+        dL = edge.rest_length
+
+        # Compute element force and Jacobian
+        dF, dJ = gradEs_hessEs(xa, xb, dL, EA)
+
+        # Assemble
+        Fs[ind] -= dF
+        Js[np.ix_(ind, ind)] -= dJ
+
+    return Fs, Js
+
+

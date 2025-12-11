@@ -1,9 +1,9 @@
 import numpy as np
 
 class VertexObj:
-    def __init__(self, x,y,z, index):
+    def __init__(self, x,y,z):
         self.children = []
-        self.index = index
+        self.index = None
         self.edges = []
         self.rest_coords = (x,y,z)
         self.edgePairs = []
@@ -18,6 +18,7 @@ class VertexObj:
         self.rest_kappa = [None, None]
         self.kappa = [None, None]
         self.ref_twist = []
+        self.f_ext = np.zeros(3)
 
 
     def get_attached_vertex(self):
@@ -79,6 +80,7 @@ class EdgeObj:
         self.rest_twist = 0 # Initially set twist of each edge to be zero.
         self.twist = 0 # Initialize self.twist as equal to the ref_twist, which is zero
         self.twist_fixed = False
+        self.theta_index = None
 
     def get_other_vertex(self, vertex):
         if self.vertex1 == vertex:

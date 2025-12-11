@@ -66,4 +66,3 @@ def PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None):
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
-    plt.show()

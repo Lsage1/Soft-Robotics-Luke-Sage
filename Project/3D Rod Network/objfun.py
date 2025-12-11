@@ -9,6 +9,7 @@ from getFt import getFt
 from computeTimeParallel_OO import computeTimeParallel_OO
 from ComputeTangentEdges import ComputeTangentEdges
 from getRefTwist_OO import getRefTwist_OO
+from computeMaterialDirectors_OO import computeMaterialDirectors_OO
 
 def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
             qOld, uOld,
@@ -19,8 +20,18 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
   q_new = qOld.copy()
   iter = 0
   error = 10 * tol
+  getRefTwist_OO
 
   while error > tol:
+    ################ UNPACK OBJECTS INTO QNEW ###################
+    for vertex in vertexObjs:
+        vertex.coords = q_new[vertex.index]
+
+    # Insert twist DOFs
+    for edge in edgeObjs:
+        edge.theta = q_new[edge.theta_index]
+
+
     # Reference frame
     # Compute a1_new, a2_new for each edge
     computeTimeParallel_OO(end_edge, first_end_vertex, edgeObjs, qOld, q_new) # Time parallel reference frame along the rod.
@@ -28,21 +39,19 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
     ComputeTangentEdges(edgeObjs, True)
 
 
-    refTwist_new = getRefTwist_OO(vertexObjs, edgeObjs, end_edge, first_end_vertex) # Reference twist vector of size nv
+    getRefTwist_OO(vertexObjs, edgeObjs, end_edge, first_end_vertex) # Reference twist vector of size nv
 
 
-    quit()
-    # Material frame
-    theta = q_new[3::4]
-    m1, m2 = computeMaterialDirectors(a1_new, a2_new, theta) # Material directors of size nv x 3
+    for edge in edgeObjs:
+        computeMaterialDirectors_OO(edge) # Material directors for each edge
 
     # Computer elastic forces
-    Fs, Js = getFs(q_new, EA, refLen)
-    Fb, Jb = getFb(q_new, m1, m2, kappaBar, EI, voronoiRefLen)
-    Ft, Jt = getFt(q_new, refTwist_new, twistBar, GJ, voronoiRefLen)
-
-    Forces = Fs + Fb + Ft + Fg
-    JForces = Js + Jb + Jt
+    Fs, Js = getFs(EA, vertexObjs, edgeObjs)
+    #Fb, Jb = getFb(q_new, m1, m2, kappaBar, EI, voronoiRefLen)
+    #Ft, Jt = getFt(q_new, refTwist_new, twistBar, GJ, voronoiRefLen)
+    print("force: ", Fs)
+    Forces = Fs + Fg#+ Fb + Ft + Fg
+    JForces = Js #+ Jb + Jt
 
     f = massVector / dt * ( (q_new - qOld) / dt - uOld ) - Forces
     J = massMatrix / dt**2 - JForces
@@ -56,7 +65,16 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
     q_new[freeIndex] -= dq_free
     error = np.sum(np.abs(f_free)) # Correction
     # Keep in mind that "error = np.sum(np.abs(dq_free))" is ok but tol should be computed based on length
+
+    # REPACK INTO OBJECTS TO PASS TO NEXT ITERATION:
+    # Update vertex coordinates
+    for vertex in vertexObjs:
+        vertex.coords = q_new[vertex.index]
+
+    # Update edge twists
+    for edge in edgeObjs:
+        edge.theta = q_new[edge.theta_index]
     iter += 1
 
-  uNew = (q_new - qOld) / dt
-  return q_new, uNew, a1_new, a2_new
+  u_new = (q_new - qOld) / dt
+  return q_new, u_new
