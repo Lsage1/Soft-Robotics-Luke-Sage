@@ -65,11 +65,13 @@ for vertex in vertexObjs:
         vertex_np1 = edge2.get_other_vertex(vertex)
         # Get edge vectors
 
+for vertex in vertexObjs:
+    print(vertex.edges)
 
     # Detect Junctions and Rod Ends
     if len(vertex.edges) >= 3:
         vertex.junction = True
-    elif len(vertex.edges) == 0:
+    elif len(vertex.edges) == 1:
         vertex.end = True
 
     # Initialize vertex coordinates at same location as rest coordinates
@@ -134,9 +136,6 @@ for edge in edgeObjs:
 print(len(qOld_tr), "Translational Degrees of Freedom")
 print(len(qOld_rot), "Rotational Degrees of Freedom")
 
-for edge in edgeObjs:
-    if edge.vertex1.end is True:
-        edge.is_internal
 
 first_end_vertex = next(v for v in vertexObjs if v.end) # Get the first vertex with an end
 end_edge = first_end_vertex.edges[0] # This vertex is an end, so it has one edge, which will be the first in its list
@@ -229,6 +228,7 @@ for v in vertexObjs:
 ############### BOUNDARY CONDITIONS ####################
 # Set up boundary conditions: Index of fixed degrees of freedom. Form: [[VertexIndex, [X, Y, Z]]...]
 vertexObjs[0].fix([True, True, True])
+vertexObjs[1].fix([True, True, True])
 # Index of edges with fixed rotation. NOTE: Currently no edges have fixed rotation.
 edgeObjs[0].twist_fixed = True
 

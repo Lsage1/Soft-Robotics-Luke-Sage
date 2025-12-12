@@ -102,6 +102,8 @@ def _tree_bending_recursive(edge_out, c_v, vertexObjs, edgeObjs, Fb, Jb, EI):
         print(v0, v1, v2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
         dF, dJ = gradEb_hessEb(v0, v1, v2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
 
+        print(dJ)
+
         ind = np.concatenate([
             edge_in.get_other_vertex(c_v).index,  # node0, 3 DOFs
             c_v.index,  # node1, 3 DOFs
