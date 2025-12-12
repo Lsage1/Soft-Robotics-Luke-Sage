@@ -1,11 +1,9 @@
 import numpy as np
 from computeKappa import computeKappa
 
-def getKappa_OO(vertex0, vertex1, vertex2, edge01, edge12):
-    # Extract node positions from vetex objects
-    node0 = np.array(vertex0.coords)
-    node1 = np.array(vertex1.coords)
-    node2 = np.array(vertex2.coords)
+def getKappa_OO(node0, node1, node2, edge01, edge12):
+    # Extract node positions from vertex objects
+
 
     # Extract m1 and m2 for the current and previous edges
     m1e = edge01.m1  # m1 vector on previous  edge
@@ -17,7 +15,7 @@ def getKappa_OO(vertex0, vertex1, vertex2, edge01, edge12):
     kappa_local = computeKappa(node0, node1, node2, m1e, m2e, m1f, m2f)
 
     # Store the curvature values
-    vertex1.kappa = kappa_local
+    # vertex1.kappa = kappa_local
 
 
-    return
+    return kappa_local

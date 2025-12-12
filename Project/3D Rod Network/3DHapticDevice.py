@@ -26,10 +26,12 @@ from tree_traverse import tree_getKappa
 #                     [-0.1, 0, -0.1], [-0.05, 0.05, 0], [-0.1, 0.05, 0]])
 #edges = np.array([[0,1], [0,2], [0,3], [0,4], [1,5], [2,6], [3,7], [4,8], [5,9], [6, 10], [7, 11], [8, 12], [8,13], [1,14], [14, 15]])
 
-vertices = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0, -0.01, 0], [0, -0.02, 0], [0, 0,-0.01], [0, 0, -0.02]])
-edges = np.array([[0,1], [1,2], [0,3], [3, 4], [0, 5], [5,6]])
+#vertices = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0, -0.01, 0], [0, -0.02, 0], [0, 0,-0.01], [0, 0, -0.02]])
+#edges = np.array([[0,1], [1,2], [0,3], [3, 4], [0, 5], [5,6]])
 
-# Inputs
+vertices = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0.03, 0, 0], [0.04, 0, 0]])
+edges = np.array([[0,1], [1,2], [2,3], [3, 4]])
+
 nv = len(vertices) # number of nodes
 ne = len(edges)
 ndof_tr = 3*nv # translational degrees of freedom
@@ -138,6 +140,7 @@ for edge in edgeObjs:
 
 first_end_vertex = next(v for v in vertexObjs if v.end) # Get the first vertex with an end
 end_edge = first_end_vertex.edges[0] # This vertex is an end, so it has one edge, which will be the first in its list
+end_edge.network_root = True
 t0 = end_edge.tangent
 
 
@@ -150,7 +153,7 @@ if np.linalg.norm(np.cross(t0, arb_v)) < 1e-3:  # Check if t0 and arb_v are para
 a1_first = a1_first / np.linalg.norm(a1_first)  # Ensure it is unit
 end_edge.a1 = a1_first
 end_edge.a2 = np.cross(t0, a1_first)
-end_edge.a2 = end_edge.a1 / np.linalg.norm(end_edge.a2)  # Ensure it is unit
+end_edge.a2 = end_edge.a2 / np.linalg.norm(end_edge.a2)  # Ensure it is unit
 computeMaterialDirectors_OO(end_edge)
 
 # /\/\/\/\ Tree: Compute Space Parallel and Compute Material Directors /\/\/\/\
@@ -167,6 +170,10 @@ v0 = first_end_vertex
 v1 = end_edge.get_other_vertex(v0)
 end_edge.handled = True # Mark starting edge handled
 tree_getKappa(end_edge, v1, vertexObjs, edgeObjs)
+
+for vertex in vertexObjs:
+    vertex.rest_kappa = vertex.kappa.copy()
+    vertex.junction_rest_kappa = [kappa_pair.copy() for kappa_pair in vertex.junction_kappa]
 
 
 ######################### Q_O vector assembly ###########################
@@ -211,17 +218,17 @@ massMatrix = np.diag(massVector)
 # ################### External Force: Point Loads ##################
 
 F_end = 0.1 # CHANGE LATER
-vectorLoad = np.array([0, 0, -0.0001]) # Point load vector
+vectorLoad = np.array([0, 0, -0.001]) # Point load vector
 
 Fg = np.zeros(ndof) # External force vector
-vertexObjs[2].f_ext = vectorLoad
+vertexObjs[4].f_ext = vectorLoad
 for v in vertexObjs:
     Fg[v.index] += v.f_ext
 
 
 ############### BOUNDARY CONDITIONS ####################
 # Set up boundary conditions: Index of fixed degrees of freedom. Form: [[VertexIndex, [X, Y, Z]]...]
-vertexObjs[4].fix([True, True, True])
+vertexObjs[0].fix([True, True, True])
 # Index of edges with fixed rotation. NOTE: Currently no edges have fixed rotation.
 edgeObjs[0].twist_fixed = True
 

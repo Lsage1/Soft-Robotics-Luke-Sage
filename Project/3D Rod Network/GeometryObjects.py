@@ -17,6 +17,8 @@ class VertexObj:
         self.dofs_fixed = [False, False, False]
         self.rest_kappa = [None, None]
         self.kappa = [None, None]
+        self.junction_kappa = []
+        self.junction_rest_kappa = []
         self.ref_twist = []
         self.f_ext = np.zeros(3)
 
@@ -81,6 +83,7 @@ class EdgeObj:
         self.twist = 0 # Initialize self.twist as equal to the ref_twist, which is zero
         self.twist_fixed = False
         self.theta_index = None
+        self.network_root = False
 
     def get_other_vertex(self, vertex):
         if self.vertex1 == vertex:
@@ -90,9 +93,10 @@ class EdgeObj:
 
     def is_internal(self):
         """
-        Returns True if the edge is internal (both vertices are not ends).
+        Returns True if the edge is internal (both vertices are not ends or junctions).
         """
-        return not self.vertex1.end and not self.vertex2.end
+        return (not self.vertex1.end and not self.vertex2.end
+                and not self.vertex1.junction and not self.vertex2.junction)
 
     def get_branch_number(self):
         parent = self.parent
@@ -105,4 +109,8 @@ class EdgeObj:
             # self is not in parent.children
             return None
 
-
+    def has_children(self):
+        if len(self.children) > 0:
+            return True
+        else:
+            return False
