@@ -77,7 +77,6 @@ def _tree_bending_recursive(edge_out, c_v, vertexObjs, edgeObjs, Fb, Jb, EI):
 
             # Compute force and Jacobian
             dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, kappa_j, dL, EI)
-
             ind = np.concatenate([
                 edge0.get_other_vertex(c_v).index,  # node0, 3 DOFs
                 c_v.index,  # node1, 3 DOFs
@@ -93,8 +92,6 @@ def _tree_bending_recursive(edge_out, c_v, vertexObjs, edgeObjs, Fb, Jb, EI):
         v0 = edge_in.get_other_vertex(c_v).coords
         v1 = c_v.coords
         v2 = edge_out.get_other_vertex(c_v).coords
-        print("Vs", v0, v1, v2)
-        print("cv rest kappa", c_v.rest_kappa)
         #PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=[edge_in, edge_out])
         #plt.show()
 
@@ -102,8 +99,9 @@ def _tree_bending_recursive(edge_out, c_v, vertexObjs, edgeObjs, Fb, Jb, EI):
         m1f, m2f = edge_out.m1, edge_out.m2
         dL = 0.5 * (edge_in.rest_length + edge_out.rest_length)
         curvature0 = c_v.rest_kappa
-
+        print(v0, v1, v2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
         dF, dJ = gradEb_hessEb(v0, v1, v2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
+
         ind = np.concatenate([
             edge_in.get_other_vertex(c_v).index,  # node0, 3 DOFs
             c_v.index,  # node1, 3 DOFs

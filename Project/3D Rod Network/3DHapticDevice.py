@@ -67,9 +67,9 @@ for vertex in vertexObjs:
 
 
     # Detect Junctions and Rod Ends
-    if len(vertex.edgePairs) > 1:
+    if len(vertex.edges) >= 3:
         vertex.junction = True
-    if len(vertex.edgePairs) == 0:
+    elif len(vertex.edges) == 0:
         vertex.end = True
 
     # Initialize vertex coordinates at same location as rest coordinates

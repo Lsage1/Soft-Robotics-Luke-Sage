@@ -48,6 +48,8 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
 
     for edge in edgeObjs:
         computeMaterialDirectors_OO(edge) # Material directors for each edge
+    for edge in edgeObjs:
+        edge.handled = False
     tree_getKappa(end_edge, first_end_vertex, vertexObjs, edgeObjs)
 
     # Computer elastic forces

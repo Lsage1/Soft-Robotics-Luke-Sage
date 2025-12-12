@@ -11,7 +11,7 @@ from computeKappa import computeKappa
 print("Running Task 1")
 
 # Inputs
-nv = 50 # number of nodes
+nv = 5 # number of nodes
 ne = nv - 1
 ndof = 3*nv + ne
 
@@ -42,9 +42,8 @@ for c in range(nv):
   nodes[c,0] = a * np.cos(t)
   nodes[c,1] = a * np.sin(t)
   nodes[c,2] = - b * t
-print(nodes)
-nodes = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0.03, 0, 0], [0.04, 0, 0]])
 
+nodes = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0.03, 0, 0], [0.04, 0, 0]])
 
 # ELASTIC STIFFNESS
 
@@ -89,7 +88,7 @@ massMatrix = np.diag(massVector)
 # External Force: Point load on the last node (instead of gravity)
 
 F_end = EI / L ** 2
-vectorLoad = np.array([0, 0, -F_end]) # Point load vector
+vectorLoad = np.array([0, 0, -0.1]) # Point load vector
 
 Fg = np.zeros(ndof) # Eexternal force vector
 c = nv-1
@@ -192,29 +191,13 @@ for timeStep in range(Nsteps):
 
   satisfied = False
 
-  # Assemble a list of times to check against the current time. Used to check if steady state is reached.
-  if ctime > track_time:
-      # assemble a list of the times to check against
-      track_list = endZ[timeStep-(track_steps-1) : timeStep+1]
-
-      # Obtain a list of the percent differences of each value within the check time
-      for j, i in enumerate(track_list[1:]):
-          zdiff_list[j] = ( (i - track_list[0]) / track_list[0] )
-      # Check if all the values within the check time are within 1% of the current time
-      satisfied = True
-      for z in zdiff_list:
-          if abs(z) > 0.01:
-              satisfied = False
-      if satisfied:
-          breakStep = timeStep
-          break
-
-  print('Current time: ', ctime, " Idx: ", timeStep, " Satisfied: ", satisfied)
 
 
 
 
-  if timeStep % 10 == 0:
+
+
+  if timeStep % 25 == 0:
     plotrod_simple(q_new, ctime)
 
   ctime += dt # Current time
@@ -227,12 +210,8 @@ for timeStep in range(Nsteps):
 plt.figure(2)
 time_array = np.arange(1, Nsteps+1, 1) * dt
 # Plot only until the convergence
-plt.plot(time_array[:breakStep], endZ[:breakStep], 'ro-')
-plt.plot(time_array[breakStep], endZ[breakStep], 'bo', label = "Steady State Value")
 
-plt.legend()
-plt.xlabel('Time (s)')
-plt.ylabel('End Z (m)')
-plt.show()
+
+
 
 print("Finished Task 1")

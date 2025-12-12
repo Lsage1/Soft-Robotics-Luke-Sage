@@ -52,6 +52,7 @@ def objfun(qOld, uOld, a1_old, a2_old,
     error = np.sum(np.abs(f_free)) # Correction
     # Keep in mind that "error = np.sum(np.abs(dq_free))" is ok but tol should be computed based on length
     iter += 1
+    print(iter)
 
   uNew = (q_new - qOld) / dt
   return q_new, uNew, a1_new, a2_new
