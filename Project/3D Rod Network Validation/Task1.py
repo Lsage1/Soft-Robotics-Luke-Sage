@@ -59,8 +59,8 @@ GJ = G * np.pi * r0**4 / 2.0 # Twisting stiffness
 
 # TIME PARAMETERS
 
-totalTime = 1.0 # seconds - total time of the simulation
-dt = 0.01 # TIme step size -- may need to be adjusted
+totalTime = 0.5 # seconds - total time of the simulation
+dt = 0.001 # TIme step size -- may need to be adjusted
 
 # Tolerance
 tol = EI / L ** 2 * 1e-3
@@ -174,6 +174,8 @@ track_time = 2 # seconds
 track_steps = round(track_time / dt) # Number of steps to track if steady state has occurred.
 zdiff_list =  np.zeros(track_steps)
 breakStep = Nsteps # Code will plot until breakStep, but if we reach the final time step, it will plot the whole time.
+
+print(massVector)
 
 # PART 1
 for timeStep in range(Nsteps):

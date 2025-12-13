@@ -18,6 +18,7 @@ from getKappa_OO import getKappa_OO
 from computeMaterialDirectors_OO import computeMaterialDirectors_OO
 from tree_traverse import tree_CSP_CMD
 from tree_traverse import tree_getKappa
+from assign_dof_indices import assign_dof_indices
 
 #vertices = np.array([[0,0,0],
 #                     [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0],
@@ -26,11 +27,11 @@ from tree_traverse import tree_getKappa
 #                     [-0.1, 0, -0.1], [-0.05, 0.05, 0], [-0.1, 0.05, 0]])
 #edges = np.array([[0,1], [0,2], [0,3], [0,4], [1,5], [2,6], [3,7], [4,8], [5,9], [6, 10], [7, 11], [8, 12], [8,13], [1,14], [14, 15]])
 
-#vertices = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0, -0.01, 0], [0, -0.02, 0], [0, 0,-0.01], [0, 0, -0.02]])
-#edges = np.array([[0,1], [1,2], [0,3], [3, 4], [0, 5], [5,6]])
+vertices = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0, -0.01, 0], [0, -0.02, 0], [0, 0,-0.01], [0, 0, -0.02]])
+edges = np.array([[0,1], [1,2], [0,3], [3, 4], [0, 5], [5,6]])
 
-vertices = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0.03, 0, 0], [0.04, 0, 0]])
-edges = np.array([[0,1], [1,2], [2,3], [3, 4]])
+#vertices = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0.03, 0, 0], [0.04, 0, 0]])
+#edges = np.array([[0,1], [1,2], [2,3], [3, 4]])
 
 nv = len(vertices) # number of nodes
 ne = len(edges)
@@ -69,7 +70,7 @@ for vertex in vertexObjs:
     # Detect Junctions and Rod Ends
     if len(vertex.edges) >= 3:
         vertex.junction = True
-    elif len(vertex.edges) == 0:
+    elif len(vertex.edges) == 1:
         vertex.end = True
 
     # Initialize vertex coordinates at same location as rest coordinates
@@ -95,19 +96,19 @@ PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)
 # ELASTIC STIFFNESS
 
 # Material Parameters
-Y = 7e6 # 10 MPa - Young's modulus
+Y = 7e7 # 10 MPa - Young's modulus
 nu = 0.5 # Poisson's ration. Standard for elastomers
 G = Y / ( 2 * (1 + nu)) # Shear modulus
 
 # Stiffness variables **** NOTE: MAKE THIS VERTEX OR EDGE BASED
 EA = Y * np.pi * r0**2 # Stretching stiffness
-EI = Y * np.pi * r0**4 / 4.0 * 100 # Bending stiffness
+EI = Y * np.pi * r0**4 / 4.0  # Bending stiffness
 GJ = G * np.pi * r0**4 / 2.0 # Twisting stiffness
 
 # TIME PARAMETERS
 
 totalTime = 2 # seconds - total time of the simulation
-dt = 0.01 # TIme step size -- may need to be adjusted
+dt = 0.001 # TIme step size -- may need to be adjusted
 
 # Tolerance
 tol = EI / 0.1 ** 2 * 1e-3  ######################################## CHANGE
@@ -218,7 +219,7 @@ massMatrix = np.diag(massVector)
 # ################### External Force: Point Loads ##################
 
 F_end = 0.1 # CHANGE LATER
-vectorLoad = np.array([0, 0, -0.001]) # Point load vector
+vectorLoad = np.array([0, 0, -0.1]) # Point load vector
 
 Fg = np.zeros(ndof) # External force vector
 vertexObjs[4].f_ext = vectorLoad
@@ -228,9 +229,11 @@ for v in vertexObjs:
 
 ############### BOUNDARY CONDITIONS ####################
 # Set up boundary conditions: Index of fixed degrees of freedom. Form: [[VertexIndex, [X, Y, Z]]...]
-vertexObjs[0].fix([True, True, True])
+vertexObjs[1].fix([True, True, True])
+vertexObjs[2].fix([True, True, True])
+
 # Index of edges with fixed rotation. NOTE: Currently no edges have fixed rotation.
-edgeObjs[0].twist_fixed = True
+#edgeObjs[0].twist_fixed = True
 
  # Assemble free_index vector
 ndof_total = len(vertexObjs)*3 + len(edgeObjs) # Total number of DOFS:
@@ -271,9 +274,16 @@ image_folder = "images"
 os.makedirs(image_folder, exist_ok=True)
 frame_files = []
 
+# DELETE THIS LATER:
+for i, edge in enumerate(edgeObjs):
+    edge.number = i
+
+for i, vertex in enumerate(vertexObjs):
+    vertex.number = i
+
+track_last_node = np.zeros(Nsteps)
 
 
-print("entering Loop")
 for timeStep in range(Nsteps):
 
 
@@ -283,6 +293,8 @@ for timeStep in range(Nsteps):
                         massVector, massMatrix,
                         EA, EI, GJ, Fg)
 
+  track_last_node[timeStep] = vertexObjs[-1].coords[2]
+  print(vertexObjs[-1].coords[2])
 
   qOld = q_new.copy()
   uOld = u_new.copy()
@@ -320,3 +332,5 @@ print(f"Video saved to {video_path}")
 
 PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)  # Save frame as image
 plt.show()
+
+print(track_last_node)

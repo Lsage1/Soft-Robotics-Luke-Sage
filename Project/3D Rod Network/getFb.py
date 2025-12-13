@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 def getFb_OO_tree(root_edge, root_vertex, vertexObjs, edgeObjs, EI, ndof_total):
 
-
     """
     Compute bending forces and Jacobian by recursively traversing the tree.
 
@@ -21,6 +20,8 @@ def getFb_OO_tree(root_edge, root_vertex, vertexObjs, edgeObjs, EI, ndof_total):
     """
 
     Fb = np.zeros(ndof_total)
+    Jb_test = np.zeros((ndof_total, ndof_total))
+
     Jb = np.zeros((ndof_total, ndof_total))
 
     # Reset handled flags
@@ -99,17 +100,24 @@ def _tree_bending_recursive(edge_out, c_v, vertexObjs, edgeObjs, Fb, Jb, EI):
         m1f, m2f = edge_out.m1, edge_out.m2
         dL = 0.5 * (edge_in.rest_length + edge_out.rest_length)
         curvature0 = c_v.rest_kappa
-        print(v0, v1, v2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
         dF, dJ = gradEb_hessEb(v0, v1, v2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
-
         ind = np.concatenate([
             edge_in.get_other_vertex(c_v).index,  # node0, 3 DOFs
-            c_v.index,  # node1, 3 DOFs
-            [edge_in.theta_index],  # Edge0 twist, 1 DOF
-            edge_out.get_other_vertex(c_v).index,  # node2, 3 DOFs
-            [edge_out.theta_index]])  # Edge1 twist, 1 DOF
+            [edge_in.theta_index],                # Edge0 twist, 1 DOF
+            c_v.index,                            # node1, 3 DOF
+            [edge_out.theta_index],               # Edge1 twist, 1 DOF
+            edge_out.get_other_vertex(c_v).index, # node2, 3 DOFs
+            ])
+
+
+
+        #DELETE LATER - Index Validation
+
+
         Fb[ind] -= dF
         Jb[np.ix_(ind, ind)] -= dJ
+
+
 
     # Traverse children edges
     for edge_child in edge_out.children:
