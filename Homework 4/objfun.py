@@ -36,8 +36,8 @@ def objfun(qOld, uOld, a1_old, a2_old,
     Fb, Jb = getFb(q_new, m1, m2, kappaBar, EI, voronoiRefLen)
     Ft, Jt = getFt(q_new, refTwist_new, twistBar, GJ, voronoiRefLen)
 
-    Forces = Fs + Fb + Ft + Fg
-    JForces = Js + Jb + Jt
+    Forces = Fs + Fb  + Fg
+    JForces = Js + Jb
 
     f = massVector / dt * ( (q_new - qOld) / dt - uOld ) - Forces
     J = massMatrix / dt**2 - JForces

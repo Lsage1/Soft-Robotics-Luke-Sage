@@ -21,6 +21,8 @@ class VertexObj:
         self.junction_rest_kappa = []
         self.ref_twist = []
         self.f_ext = np.zeros(3)
+        self.number = None
+        self.test_index = None
 
 
     def get_attached_vertex(self):
@@ -84,6 +86,8 @@ class EdgeObj:
         self.twist_fixed = False
         self.theta_index = None
         self.network_root = False
+        self.number = None
+        self.test_index = None
 
     def get_other_vertex(self, vertex):
         if self.vertex1 == vertex:

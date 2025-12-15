@@ -28,7 +28,6 @@ def getFb(q, m1, m2, kappaBar, EI, voronoiRefLen):
     dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
 
     ind = np.array([4*c-4, 4*c-3, 4*c-2, 4*c-1,4*c, 4*c+1, 4*c+2, 4*c+3, 4*c+4, 4*c+5, 4*c+6])
-
     Fb[ind] -= dF
     Jb[np.ix_(ind, ind)] -= dJ
 
