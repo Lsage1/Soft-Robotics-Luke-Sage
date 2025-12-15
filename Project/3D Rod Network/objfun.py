@@ -11,7 +11,14 @@ from getRefTwist_OO import getRefTwist_OO
 from computeMaterialDirectors_OO import computeMaterialDirectors_OO
 from getFb import getFb_OO_tree
 from tree_traverse import tree_getKappa
+from to_woven import to_woven
+from to_woven import to_woven_j
 
+np.set_printoptions(
+    precision=7,       # number of decimals
+    suppress=True,     # suppress scientific notation
+    linewidth=240     # wrap lines nicely
+)
 
 def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
             qOld, uOld,
@@ -63,16 +70,16 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
     f = massVector / dt * ( (q_new - qOld) / dt - uOld ) - Forces
     J = massMatrix / dt**2 - JForces
 
+
     # Extract the free part
     f_free = f[freeIndex]
     J_free = J[np.ix_(freeIndex, freeIndex)]
-
     dq_free = np.linalg.solve(J_free, f_free) # J \ f
 
     q_new[freeIndex] -= dq_free
+
     error = np.sum(np.abs(f_free)) # Correction
     # Keep in mind that "error = np.sum(np.abs(dq_free))" is ok but tol should be computed based on length
-
     # REPACK INTO OBJECTS TO PASS TO NEXT ITERATION:
     # Update vertex coordinates
     for vertex in vertexObjs:
@@ -82,6 +89,6 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
     for edge in edgeObjs:
         edge.theta = q_new[edge.theta_index]
     iter += 1
-    print(iter)
+    print(q_new, iter)
   u_new = (q_new - qOld) / dt
   return q_new, u_new

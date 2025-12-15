@@ -11,7 +11,7 @@ from computeKappa import computeKappa
 print("Running Task 1")
 
 # Inputs
-nv = 5 # number of nodes
+nv = 4 # number of nodes
 ne = nv - 1
 ndof = 3*nv + ne
 
@@ -24,7 +24,7 @@ N = 5 # Number of turns
 a = D/2 # Helix radius
 b = pitch / (2.0 * np.pi)
 T = 2.0 * np.pi * N # Angle created by the helix (N turns in the center)
-L = T * np.sqrt( a**2 + b ** 2) # Arc length of the helix
+L = 2 # Arc length of the helix
 axial_l = N * pitch # Axial length
 
 #print('Helix diameter = ', D)
@@ -43,12 +43,17 @@ for c in range(nv):
   nodes[c,1] = a * np.sin(t)
   nodes[c,2] = - b * t
 
-nodes = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0.03, 0, 0], [0.04, 0, 0]])
+nodes = np.array([
+    [0.00, 0, 0],
+    [1, 0, 0],
+    [2, 0, 0],
+    [3, 0, 0]
 
+])
 # ELASTIC STIFFNESS
 
 # Material Parameters
-Y = 7e7 # 10 MPa - Young's modulus
+Y = 190e9 # 10 MPa - Young's modulus
 nu = 0.5 # Poisson's ration
 G = Y / ( 2 * (1 + nu)) # Shear modulus
 
@@ -59,7 +64,7 @@ GJ = G * np.pi * r0**4 / 2.0 # Twisting stiffness
 
 # TIME PARAMETERS
 
-totalTime = 1.0 # seconds - total time of the simulation
+totalTime = 2 # seconds - total time of the simulation
 dt = 0.01 # TIme step size -- may need to be adjusted
 
 # Tolerance
@@ -67,9 +72,12 @@ tol = EI / L ** 2 * 1e-3
 
 # MASS VECTORS AND MATRIX
 
+
+
 rho = 1200 # kg/m^3 -- density
 totalM = L * np.pi * r0**2 * rho  # Total mass of the rod
 dm = totalM / ne
+
 
 massVector = np.zeros(ndof)
 for c in range(nv):
@@ -83,12 +91,14 @@ for c in range(ne):
   massVector[4*c+3] = 0.5 * dm * r0 ** 2 # Equation for a solid cylinder
   # Because r0 is really small, we may get away with just using 0 angular mass
 
+
+
 massMatrix = np.diag(massVector)
 
 # External Force: Point load on the last node (instead of gravity)
 
 F_end = EI / L ** 2
-vectorLoad = np.array([0, 0, -0.1]) # Point load vector
+vectorLoad = np.array([0, 0, -1]) # Point load vector
 
 Fg = np.zeros(ndof) # Eexternal force vector
 c = nv-1
@@ -177,7 +187,7 @@ breakStep = Nsteps # Code will plot until breakStep, but if we reach the final t
 
 # PART 1
 for timeStep in range(Nsteps):
-
+  print("TESTING TESTING")
   q_new, u_new, a1_new, a2_new = objfun(qOld, uOld, a1_old, a2_old,
                                         freeIndex, dt, tol, refTwist,
                                         massVector, massMatrix,
@@ -186,18 +196,9 @@ for timeStep in range(Nsteps):
                                         kappaBar, twistBar,
                                         Fg)
 
-  # Save endZ (z coordinate of the last node)
-  endZ[timeStep] = q_new[-1] - endZ_0
+  print("################# CTIME: ", ctime)
 
-  satisfied = False
-
-
-
-
-
-
-
-  if timeStep % 25 == 0:
+  if timeStep % 10 == 0:
     plotrod_simple(q_new, ctime)
 
   ctime += dt # Current time
@@ -211,7 +212,7 @@ plt.figure(2)
 time_array = np.arange(1, Nsteps+1, 1) * dt
 # Plot only until the convergence
 
-
+print(qOld)
 
 
 print("Finished Task 1")

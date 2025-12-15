@@ -6,6 +6,13 @@ from computeMaterialDirectors import computeMaterialDirectors
 from getFs import getFs
 from getFb import getFb
 from getFt import getFt
+from to_interleaved import to_interleaved
+
+np.set_printoptions(
+    precision=7,       # number of decimals
+    suppress=True,     # suppress scientific notation
+    linewidth=240      # wrap lines nicely
+)
 
 def objfun(qOld, uOld, a1_old, a2_old,
            freeIndex,
@@ -36,8 +43,8 @@ def objfun(qOld, uOld, a1_old, a2_old,
     Fb, Jb = getFb(q_new, m1, m2, kappaBar, EI, voronoiRefLen)
     Ft, Jt = getFt(q_new, refTwist_new, twistBar, GJ, voronoiRefLen)
 
-    Forces = Fs + Fb + Ft + Fg
-    JForces = Js + Jb + Jt
+    Forces = Fs + Fb + Fg #+ Ft
+    JForces = Js + Jb# + Jt
 
     f = massVector / dt * ( (q_new - qOld) / dt - uOld ) - Forces
     J = massMatrix / dt**2 - JForces
@@ -45,14 +52,13 @@ def objfun(qOld, uOld, a1_old, a2_old,
     # Extract the free part
     f_free = f[freeIndex]
     J_free = J[np.ix_(freeIndex, freeIndex)]
-
     dq_free = np.linalg.solve(J_free, f_free) # J \ f
-
     q_new[freeIndex] -= dq_free
+
+
     error = np.sum(np.abs(f_free)) # Correction
     # Keep in mind that "error = np.sum(np.abs(dq_free))" is ok but tol should be computed based on length
     iter += 1
-    print(iter)
-
+    print(q_new, iter)
   uNew = (q_new - qOld) / dt
   return q_new, uNew, a1_new, a2_new

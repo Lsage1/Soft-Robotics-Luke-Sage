@@ -22,17 +22,28 @@ from tree_traverse import tree_getKappa
 print("test2")
 
 #vertices = np.array([[0,0,0],
-#                     [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0],
+# #                     [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0],
 #                     [0,0.1,-0.05], [0.1,0,-0.05], [0,-0.1,-0.05], [-0.1, 0,-0.05],
 #                     [0,0.15,-0.1], [0.15,0,-0.1], [0,-0.15,-0.1], [-0.15, 0,-0.1],
 #                     [-0.1, 0, -0.1], [-0.05, 0.05, 0], [-0.1, 0.05, 0]])
 #edges = np.array([[0,1], [0,2], [0,3], [0,4], [1,5], [2,6], [3,7], [4,8], [5,9], [6, 10], [7, 11], [8, 12], [8,13], [1,14], [14, 15]])
 
-#vertices = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0, -0.01, 0], [0, -0.02, 0], [0, 0,-0.01], [0, 0, -0.02]])
+#vertices = np.array([[0,0,0], [1, 0, 0], [0.02, 0, 0], [0, -0.01, 0], [0, -0.02, 0], [0, 0,-0.01], [0, 0, -0.02]])
 #edges = np.array([[0,1], [1,2], [0,3], [3, 4], [0, 5], [5,6]])
 
-vertices = np.array([[0,0,0], [0.01, 0, 0], [0.02, 0, 0], [0.03, 0, 0], [0.04, 0, 0]])
-edges = np.array([[0,1], [1,2], [2,3], [3, 4]])
+vertices = np.array([
+    [0.00, 0, 0],
+    [1, 0, 0],
+    [2, 0, 0],
+    [3, 0, 0]
+
+])
+edges = np.array([
+    [0,1],
+    [1,2],
+    [2,3]
+
+])
 
 nv = len(vertices) # number of nodes
 ne = len(edges)
@@ -99,13 +110,13 @@ PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)
 # ELASTIC STIFFNESS
 
 # Material Parameters
-Y = 7e6 # 10 MPa - Young's modulus
+Y = 200e9 # 10 MPa - Young's modulus
 nu = 0.5 # Poisson's ration. Standard for elastomers
 G = Y / ( 2 * (1 + nu)) # Shear modulus
 
 # Stiffness variables **** NOTE: MAKE THIS VERTEX OR EDGE BASED
 EA = Y * np.pi * r0**2 # Stretching stiffness
-EI = Y * np.pi * r0**4 / 4.0 * 100 # Bending stiffness
+EI = Y * np.pi * r0**4 / 4.0 # Bending stiffness
 GJ = G * np.pi * r0**4 / 2.0 # Twisting stiffness
 
 # TIME PARAMETERS
@@ -200,9 +211,14 @@ for edge in edgeObjs:
 # NOTE: still need to handle junction additional mass
 rho = 1200 # kg/m^3 -- density
 # CHANGE TOTAL LENGTH LATER *********************************************
-totalM = 0.05*8 * np.pi * r0**2 * rho  # Total mass of the rod
+totalLength = 0
+for edge in edgeObjs:
+    totalLength += edge.rest_length
+
+totalM = totalLength * np.pi * r0**2 * rho  # Total mass of the rod
 dm = totalM / ne
 
+print(totalM)
 
 massVector = np.zeros(ndof)
 for vertex in vertexObjs:
@@ -210,19 +226,21 @@ for vertex in vertexObjs:
       massVector[vertex.index] = dm/2
   else:
       massVector[vertex.index] = dm
+
 for edge in edgeObjs:
     massVector[edge.theta_index] = 0.5 * dm * r0 ** 2 # Equation for a solid cylinder
   # Because r0 is really small, we may get away with just using 0 angular mass
+
 
 massMatrix = np.diag(massVector)
 
 # ################### External Force: Point Loads ##################
 
 F_end = 0.1 # CHANGE LATER
-vectorLoad = np.array([0, 0, -0.001]) # Point load vector
+vectorLoad = np.array([0, 0, -1]) # Point load vector
 
 Fg = np.zeros(ndof) # External force vector
-vertexObjs[4].f_ext = vectorLoad
+vertexObjs[3].f_ext = vectorLoad
 for v in vertexObjs:
     Fg[v.index] += v.f_ext
 
@@ -288,8 +306,7 @@ for timeStep in range(Nsteps):
 
   qOld = q_new.copy()
   uOld = u_new.copy()
-  print('Current time: ', ctime, " Idx: ", timeStep)
-
+  print("################# CTIME: ", ctime)
 
 
   ctime += dt # Current time
@@ -322,3 +339,4 @@ print(f"Video saved to {video_path}")
 
 PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)  # Save frame as image
 plt.show()
+print(qOld)

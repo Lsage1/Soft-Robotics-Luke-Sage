@@ -2,6 +2,7 @@ import numpy as np
 from gradEb_hessEb import gradEb_hessEb
 from PlotRodNetwork import PlotRodNetwork
 import matplotlib.pyplot as plt
+from to_woven import to_woven_j
 
 def getFb_OO_tree(root_edge, root_vertex, vertexObjs, edgeObjs, EI, ndof_total):
 
@@ -77,15 +78,18 @@ def _tree_bending_recursive(edge_out, c_v, vertexObjs, edgeObjs, Fb, Jb, EI):
 
             # Compute force and Jacobian
             dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, kappa_j, dL, EI)
+
             ind = np.concatenate([
                 edge0.get_other_vertex(c_v).index,  # node0, 3 DOFs
                 c_v.index,  # node1, 3 DOFs
                 [edge0.theta_index],  # Edge0 twist, 1 DOF
                 edge1.get_other_vertex(c_v).index,  # node2, 3 DOFs
                 [edge1.theta_index]])  # Edge1 twist, 1 DOF
-
             Fb[ind] -= dF
             Jb[np.ix_(ind, ind)] -= dJ
+
+
+
     # Edge internal bending (ignore ends)
     elif not edge_out.network_root:
         edge_in = edge_out.parent
@@ -99,20 +103,20 @@ def _tree_bending_recursive(edge_out, c_v, vertexObjs, edgeObjs, Fb, Jb, EI):
         m1f, m2f = edge_out.m1, edge_out.m2
         dL = 0.5 * (edge_in.rest_length + edge_out.rest_length)
         curvature0 = c_v.rest_kappa
-        print(v0, v1, v2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
         dF, dJ = gradEb_hessEb(v0, v1, v2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
-
-        print(dJ)
 
         ind = np.concatenate([
             edge_in.get_other_vertex(c_v).index,  # node0, 3 DOFs
-            c_v.index,  # node1, 3 DOFs
             [edge_in.theta_index],  # Edge0 twist, 1 DOF
-            edge_out.get_other_vertex(c_v).index,  # node2, 3 DOFs
-            [edge_out.theta_index]])  # Edge1 twist, 1 DOF
+            c_v.index,  # node1, 3 DOFs
+            [edge_out.theta_index],  # Edge1 twist, 1 DOF
+            edge_out.get_other_vertex(c_v).index])  # node2, 3 DOFs
+
         Fb[ind] -= dF
         Jb[np.ix_(ind, ind)] -= dJ
-
+        #print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+        #(to_woven_j(Jb, 3))
+        #print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
     # Traverse children edges
     for edge_child in edge_out.children:
         if not edge_child.handled:
