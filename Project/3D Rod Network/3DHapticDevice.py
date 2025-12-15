@@ -19,6 +19,8 @@ from computeMaterialDirectors_OO import computeMaterialDirectors_OO
 from tree_traverse import tree_CSP_CMD
 from tree_traverse import tree_getKappa
 
+print("test")
+
 #vertices = np.array([[0,0,0],
 #                     [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0],
 #                     [0,0.1,-0.05], [0.1,0,-0.05], [0,-0.1,-0.05], [-0.1, 0,-0.05],
