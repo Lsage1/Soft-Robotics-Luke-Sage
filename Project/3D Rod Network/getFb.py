@@ -55,82 +55,44 @@ def _tree_bending_recursive(c_v, root_edge, vertexObjs, edgeObjs, Fb, Jb, EI):
     if c_v.junction:
         #print("got a junction")
         #print(c_v.junction_rest_kappa, c_v.edgePairs)
-        for i, (edgePair, kappa_j) in enumerate(zip(c_v.edgePairs, c_v.junction_rest_kappa)):
+        for edgePair, kappa_j in zip(c_v.edgePairs, c_v.junction_rest_kappa):
             edge0, edge1 = edgePair
-            print(edge0.id, edge1.id)
 
+            # Get the "other" vertices for each edge
+            v0 = edge0.get_other_vertex(c_v)
+            v2 = edge1.get_other_vertex(c_v)
             #PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=[c_v], extra_edges=[edge0, edge1])
             #plt.title("Junction")
             #plt.show()
 
-            # Get tangents relative to junction
-            def tangent_relative(edge, v):
-                other = edge.get_other_vertex(v)
-                t = np.array(other.coords) - np.array(v.coords)
-                return t / np.linalg.norm(t)
+            t0 = edge0.tangent
+            t1 = edge1.tangent
 
-            t0_away = tangent_relative(edge0, c_v)
-            t1_away = tangent_relative(edge1, c_v)
+            if not edge0 == root_edge and not edge1 == root_edge:
+                t0 = -t0
 
-            # --- Replay rest-time flip ---
-            flip0 = c_v.junction_flip0[i]
-            flip1 = c_v.junction_flip1[i]# use stored decision from rest
-
-            t0_bending = -t0_away if flip0 else t0_away
-            t1_bending = -t1_away if flip1 else t1_away
-
-            #  Virtual nodes for bending calculation
+            # Extract m1 and m2 for the current and previous edges
+            m1e = edge0.m1  # m1 vector on previous  edge
+            m2e = edge0.m2  # m2 vector on previous edge
+            m1f = edge1.m1  # m1 vector on current edge
+            m2f = edge1.m2  # m2 vector on current edge
             dL = 0.5 * (edge0.rest_length + edge1.rest_length)
-            node0 = np.array(c_v.coords) - dL * t0_bending
+
+            node0 = np.array(v0.coords)
             node1 = np.array(c_v.coords)
-            node2 = np.array(c_v.coords) + dL * t1_bending
-
-            edge0_points_to_junction = (edge0.vertex2 == c_v)
-
-            # Material directors
-            m1e, m2e = edge0.m1.copy(), edge0.m2.copy()
-            m1f, m2f = edge1.m1.copy(), edge1.m2.copy()
-
-            # For edge0 material directors:
-            # Compute the tangent that gradEb_hessEb will use
-            te_actual = (node1 - node0) / np.linalg.norm(node1 - node0)
-
-            # Check if edge0.tangent aligns with te_actual
-            if np.dot(edge0.tangent, te_actual) < 0:
-                # They point in opposite directions, so flip material directors
-                m1e = -m1e
-                m2e = -m2e
-
-                # For edge1 material directors:
-            tf_actual = (node2 - node1) / np.linalg.norm(node2 - node1)
-
-            if np.dot(edge1.tangent, tf_actual) < 0:
-                # They point in opposite directions, so flip material directors
-                m1f = -m1f
-                m2f = -m2f
-
-            # In junction bending, add this before gradEb_hessEb call:
-            print(f"\n=== Junction {c_v.id}, Pair {i}: Edges ({edge0.id}, {edge1.id}) ===")
-            print(f"node0: {node0}, node1: {node1}, node2: {node2}")
-            print(f"te_actual: {te_actual}, edge0.tangent: {edge0.tangent}")
-            print(f"tf_actual: {tf_actual}, edge1.tangent: {edge1.tangent}")
-            print(f"te·edge0.tangent = {np.dot(edge0.tangent, te_actual):.4f}")
-            print(f"tf·edge1.tangent = {np.dot(edge1.tangent, tf_actual):.4f}")
-            print(f"m1e before: {edge0.m1}, after: {m1e}")
-            print(f"m1f before: {edge1.m1}, after: {m1f}")
-            print(f"kappa_j (rest): {kappa_j}")
+            node2 = np.array(v2.coords)
+            #print(node0, node1, node2)
 
 
-            # Compute force and Jacobian
             dF, dJ = gradEb_hessEb(node0, node1, node2, m1e, m2e, m1f, m2f, kappa_j, dL, EI)
+            #print(dJ)
 
             ind = np.concatenate([
                 edge0.get_other_vertex(c_v).index,  # node0, 3 DOFs
                 [edge0.theta_index],                # Edge0 twist, 1 DOF
                 c_v.index,                          # node1, 3 DOFs
                 [edge1.theta_index],                # Edge1 twist, 1 DOF
-                edge1.get_other_vertex(c_v).index   # node2, 3 DOFs
-            ])
+                edge1.get_other_vertex(c_v).index])  # node2, 3 DOFs
 
             #print(ind)
             Fb[ind] -= dF
@@ -160,7 +122,7 @@ def _tree_bending_recursive(c_v, root_edge, vertexObjs, edgeObjs, Fb, Jb, EI):
         curvature0 = c_v.rest_kappa
 
         dF, dJ = gradEb_hessEb(v0, v1, v2, m1e, m2e, m1f, m2f, curvature0, dL, EI)
-
+        #(dJ)
         ind = np.concatenate([
             edge_in.get_other_vertex(c_v).index,  # node0, 3 DOFs
             [edge_in.theta_index],  # Edge0 twist, 1 DOF

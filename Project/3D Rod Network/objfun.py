@@ -34,6 +34,9 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
 
   while error > tol:
 
+  #for edge in edgeObjs:
+      #edge.theta = np.arctan2(np.sin(edge.theta), np.cos(edge.theta))
+
     ################ UNPACK OBJECTS INTO QNEW ###################
     for vertex in vertexObjs:
         vertex.coords = q_new[vertex.index]
@@ -64,21 +67,16 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
     Fs, Js = getFs(EA, vertexObjs, edgeObjs)
     Fb, Jb = getFb_OO_tree(first_end_vertex, vertexObjs, edgeObjs, EI, ndof_total=len(q_new))
 
-    if iter == 1:
-        check_jacobian_conditioning(J_free, freeIndex)
 
-    if iter % 10 == 0 or iter == 1:
-        print(f"\n{'=' * 60}")
-        print(f"Iteration {iter}")
-        print(f"{'=' * 60}")
-        diagnose_junction_forces(vertexObjs, edgeObjs, Fb, q_new)
-        check_force_balance(Fs, Fb, Fg, massVector, dt, qOld, q_new, uOld)
 
-    print(Fb)
+
+
+
     #Ft, Jt = getFt(q_new, refTwist_new, twistBar, edgeObjs, VertexObjs GJ, voronoiRefLen)
 
     Forces = Fs + Fg + Fb #+ Ft
     JForces = Js + Jb #+ Jt
+
     f = massVector / dt * ( (q_new - qOld) / dt - uOld ) - Forces
     J = massMatrix / dt**2 - JForces
 

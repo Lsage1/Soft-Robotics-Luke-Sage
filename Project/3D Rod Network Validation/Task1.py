@@ -44,7 +44,7 @@ for c in range(nv):
   nodes[c,2] = - b * t
 
 nodes = np.array([
-    [0, 0, -1],
+    [0, 0, 1],
     [0, 0, 0],
     [1, 0, 0],
 

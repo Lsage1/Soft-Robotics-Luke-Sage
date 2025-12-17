@@ -3,6 +3,7 @@ from computeMaterialDirectors_OO import computeMaterialDirectors_OO
 from PlotRodNetwork import PlotRodNetwork
 from getKappa_OO import getKappa_OO
 import numpy as np
+from computeKappa import computeKappa
 
 def tree_getKappa_rest(edge_in, v_in, vertexObjs, edgeObjs):
 
@@ -18,13 +19,7 @@ def tree_getKappa_rest(edge_in, v_in, vertexObjs, edgeObjs):
     # --- Handle junction curvature ---
     if v_in.junction:
         v_in.junction_rest_kappa = []
-        v_in.junction_flip = []
-
-        def geom_tangent_away(edge, v):
-            # Get tangent pointing away from vertex v
-            other = edge.get_other_vertex(v)
-            t = np.array(other.coords) - np.array(v.coords)
-            return t / np.linalg.norm(t)
+        #v_in.junction_flip = []
 
         # Loop over all pairs of edges at junction
         for edge0, edge1 in v_in.edgePairs:
@@ -33,32 +28,31 @@ def tree_getKappa_rest(edge_in, v_in, vertexObjs, edgeObjs):
             v0 = edge0.get_other_vertex(v_in)
             v2 = edge1.get_other_vertex(v_in)
 
-            t0_away = geom_tangent_away(edge0, v_in)
-            t1_away = geom_tangent_away(edge1, v_in)
+            t0 = edge0.tangent
+            t1 = edge1.tangent
 
-            flip0 = True
-            flip1 = False
+            if not edge0 == edge_in and not edge1 == edge_in:
+                t0 = -t0
 
-            t0 = -t0_away if flip0 else t0_away
-            t1 = -t1_away if flip1 else t1_away
 
-            # --- Construct virtual nodes for curvature ---
-            L = 0.5 * (edge0.rest_length + edge1.rest_length)  # or Voronoi length
-            node0 = np.array(v_in.coords) - L * t0
+            # Extract m1 and m2 for the current and previous edges
+            m1e = edge0.m1  # m1 vector on previous  edge
+            m2e = edge0.m2  # m2 vector on previous edge
+            m1f = edge1.m1  # m1 vector on current edge
+            m2f = edge1.m2  # m2 vector on current edge
+
+            node0 = np.array(v0.coords)
             node1 = np.array(v_in.coords)
-            node2 = np.array(v_in.coords) + L * t1
+            node2 = np.array(v2.coords)
 
             # --- Compute rest curvature  ---
-            kappaBar = getKappa_OO(node0, node1, node2, edge0, edge1)
+            kappa_local = computeKappa(node0, node1, node2, m1e, m2e, m1f, m2f)
+            v_in.junction_rest_kappa.append(kappa_local)# Store results and flipped edges in junction
 
-            # Store results and flipped edges in junction
-            v_in.junction_rest_kappa.append(kappaBar)
-            v_in.junction_flip0.append(flip0)
-            v_in.junction_flip1.append(flip1)
 
     # --- Normal recursive pass for child edges ---
     for edge_out in v_in.edges:
-        if edge_out.handled or edge_out is edge_in:
+        if edge_out.handled or edge_out is edge_in: # Will filter out junctions, only run on regular rods.
             continue
 
         v_next = edge_out.get_other_vertex(v_in)

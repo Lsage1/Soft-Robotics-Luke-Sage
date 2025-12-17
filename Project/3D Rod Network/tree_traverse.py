@@ -3,6 +3,7 @@ from computeMaterialDirectors_OO import computeMaterialDirectors_OO
 from PlotRodNetwork import PlotRodNetwork
 from getKappa_OO import getKappa_OO
 import numpy as np
+from computeKappa import computeKappa
 
 def tree_CSP_CMD(edge_in, vertex_from, vertexObjs, edgeObjs):
     """
@@ -51,37 +52,27 @@ def tree_getKappa(edge_in, v_in, vertexObjs, edgeObjs):
     if v_in.junction:
         v_in.junction_kappa = []
 
-        edges_at_junction = v_in.edges
-
-        # Tangents relative to junction
-        def tangent_relative(edge, v):
-            other = edge.get_other_vertex(v)
-            t = np.array(other.coords) - np.array(v.coords)
-            return t / np.linalg.norm(t)
-
         # Loop over all pairs of edges at junction
-        for i, (edge0, edge1) in enumerate(v_in.edgePairs):
-            flip0 = v_in.junction_flip0[i]
-            flip1 = v_in.junction_flip1[i]
+        for edge0, edge1 in v_in.edgePairs:
+            v0 = edge0.get_other_vertex(v_in)
+            v2 = edge1.get_other_vertex(v_in)
 
+            t0 = edge0.tangent
+            t1 = edge1.tangent
 
-            t0 = tangent_relative(edge0, v_in)
-            t1 = tangent_relative(edge1, v_in)
+            # Extract m1 and m2 for the current and previous edges
+            m1e = edge0.m1  # m1 vector on previous  edge
+            m2e = edge0.m2  # m2 vector on previous edge
+            m1f = edge1.m1  # m1 vector on current edge
+            m2f = edge1.m2  # m2 vector on current edge
 
-            if flip0:
-                t0 = -t0
-            if flip1:
-                t1 = -t1
-
-            # --- Construct virtual nodes for curvature ---
-            L = 0.5 * (edge0.rest_length + edge1.rest_length)  # or Voronoi length
-            node0 = np.array(v_in.coords) - L * t0
+            node0 = np.array(v0.coords)
             node1 = np.array(v_in.coords)
-            node2 = np.array(v_in.coords) + L * t1
+            node2 = np.array(v2.coords)
 
             # --- Compute rest curvature using existing helper ---
-            kappaBar = getKappa_OO(node0, node1, node2, edge0, edge1)
-            v_in.junction_kappa.append(kappaBar)
+            kappa_local = computeKappa(node0, node1, node2, m1e, m2e, m1f, m2f)
+            v_in.junction_kappa.append(kappa_local)
 
     # --- Normal recursive pass for child edges ---
     for edge_out in v_in.edges:

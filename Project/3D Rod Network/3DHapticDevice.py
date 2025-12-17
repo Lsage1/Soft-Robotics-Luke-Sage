@@ -22,6 +22,11 @@ from tree_getKappa_rest import tree_getKappa_rest
 from diagnose_junction import diagnose_junction_bending
 from getFb import getFb_OO_tree
 from orient_edges_downhill import orient_edges_downhill
+from diagnose_sudden_forces import diagnose_sudden_forces, check_reference_frame_continuity, add_theta_wrapping
+from computeTimeParallel_OO import computeTimeParallel_OO
+from ComputeTangentEdges import ComputeTangentEdges
+from getRefTwist_OO import getRefTwist_OO
+
 
 #vertices = np.array([[0,0,0],
 # #                     [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0],
@@ -33,7 +38,7 @@ from orient_edges_downhill import orient_edges_downhill
 #vertices = np.array([[0,0,0], [1, 0, 0], [2, 0, 0], [0, -1, 0], [0, -2, 0], [0, 0,-1], [0, 0, -2], [0, 0, -3]])
 #edges = np.array([[0,1], [1,2], [0,3], [3, 4], [0, 5], [5,6], [6,7]])
 
-vertices = np.array([[0,0,0], [1, 0, 0], [0, -1, 0], [0, 0,-1]])
+vertices = np.array([[0,0,0], [1, 0, 0], [0, 0,1], [0, 1, 0]])
 edges = np.array([[0,1], [0,2], [0,3]])
 
 
@@ -139,7 +144,6 @@ for edge in edgeObjs:
     edge.rest_tangent = edge.tangent
     edge.tangent = edge.tangent
 
-print(end_edge.tangent)
 t0 = end_edge.tangent
 
 
@@ -170,6 +174,7 @@ v1 = end_edge.get_other_vertex(v0)
 end_edge.handled = True # Mark starting edge handled
 tree_getKappa_rest(end_edge, v1, vertexObjs, edgeObjs)
 #diagnose_junction_bending(vertexObjs, edgeObjs)
+
 
 
 
@@ -221,11 +226,12 @@ massMatrix = np.diag(massVector)
 # ################### External Force: Point Loads ##################
 
 
-vectorLoad = np.array([0, 0, -.01]) # Point load vector
+vectorLoad = np.array([0, 0, -1]) # Point load vector
 
 Fg = np.zeros(ndof) # External force vector
-#vertexObjs[3].f_ext = vectorLoad
-vertexObjs[1].f_ext = vectorLoad
+vertexObjs[0].f_ext = vectorLoad
+
+
 
 for v in vertexObjs:
     Fg[v.index] += v.f_ext
@@ -233,9 +239,9 @@ for v in vertexObjs:
 
 ############### BOUNDARY CONDITIONS ####################
 # Set up boundary conditions: Index of fixed degrees of freedom. Form: [[VertexIndex, [X, Y, Z]]...]
-vertexObjs[0].fix([True, True, True])
-vertexObjs[2].fix([True, True, True])
-vertexObjs[3].fix([True, True, True])
+vertexObjs[1].fix([True, True, True])
+
+
 
 # Index of edges with fixed rotation. NOTE: Currently no edges have fixed rotation.
 #edgeObjs[0].twist_fixed = True
@@ -290,22 +296,63 @@ for timeStep in range(Nsteps):
 
 
 
-  q_new, u_new = objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
+    q_new, u_new = objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
                         qOld, uOld,
                         free_index, dt, tol,
                         massVector, massMatrix,
                         EA, EI, GJ, Fg)
 
+    """
+    DIAGNOSTICS: 
+    """
 
-  qOld = q_new.copy()
-  uOld = u_new.copy()
-  print("################# CTIME: ", ctime)
+    # ============= ADD DIAGNOSTICS HERE =============
+    # Compute forces for diagnostics (same as in objfun but after convergence)
+
+    # Unpack q_new into objects
+    for vertex in vertexObjs:
+        vertex.coords = q_new[vertex.index]
+    for edge in edgeObjs:
+        edge.theta = q_new[edge.theta_index]
+
+    # Recompute frames and forces to check
+    ComputeTangentEdges(edgeObjs, True)
+    computeTimeParallel_OO(end_edge, first_end_vertex, edgeObjs, qOld, q_new)
+    getRefTwist_OO(vertexObjs, edgeObjs, end_edge, first_end_vertex)
+
+    for edge in edgeObjs:
+        computeMaterialDirectors_OO(edge)
+
+    for edge in edgeObjs:
+        edge.handled = False
+    tree_getKappa(end_edge, first_end_vertex, vertexObjs, edgeObjs)
+
+    # Compute forces for diagnostics
+    from getFs import getFs
+
+    Fs, Js = getFs(EA, vertexObjs, edgeObjs)
+    Fb, Jb = getFb_OO_tree(first_end_vertex, vertexObjs, edgeObjs, EI, ndof_total=len(q_new))
+
+    # Run diagnostics every N steps (or every step if you want)
+    if timeStep % 5 == 0:  # Check every 5 steps
+        diagnose_sudden_forces(vertexObjs, edgeObjs, Fb, Fs, timeStep, threshold=1e-2)
+
+    # Always check for discontinuities
+    check_reference_frame_continuity(edgeObjs, tolerance=0.1)
+
+    """
+    DIAGNOSTICS DONE
+    """
+
+    qOld = q_new.copy()
+    uOld = u_new.copy()
+    print("################# CTIME: ", ctime)
 
 
-  ctime += dt # Current time
+    ctime += dt # Current time
 
 
-  if timeStep % 2 == 1:
+    if timeStep % 2 == 1:
       PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)      # Save frame as image
       frame_path = os.path.join(image_folder, f"frame_{timeStep:05d}.png")
       plt.title(str(ctime))
@@ -313,12 +360,12 @@ for timeStep in range(Nsteps):
       frame_files.append(frame_path)
       plt.close()
 
-  if timeStep % 10 == 1:
+    if timeStep % 10 == 1:
       PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)      # Save frame as image
       plt.show()
 
-  # Old parameters become new
-  for edge in edgeObjs:
+    # Old parameters become new
+    for edge in edgeObjs:
       edge.a1_old = edge.a1.copy()
       edge.a2_old = edge.a2.copy()
       edge.tangent0 = edge.tangent.copy()
