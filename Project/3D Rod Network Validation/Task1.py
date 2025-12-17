@@ -11,7 +11,7 @@ from computeKappa import computeKappa
 print("Running Task 1")
 
 # Inputs
-nv = 4 # number of nodes
+nv = 3 # number of nodes
 ne = nv - 1
 ndof = 3*nv + ne
 
@@ -44,10 +44,10 @@ for c in range(nv):
   nodes[c,2] = - b * t
 
 nodes = np.array([
-    [0.00, 0, 0],
+    [0, 0, -1],
+    [0, 0, 0],
     [1, 0, 0],
-    [2, 0, 0],
-    [3, 0, 0]
+
 
 ])
 # ELASTIC STIFFNESS
@@ -98,7 +98,7 @@ massMatrix = np.diag(massVector)
 # External Force: Point load on the last node (instead of gravity)
 
 F_end = EI / L ** 2
-vectorLoad = np.array([0, 0, -1]) # Point load vector
+vectorLoad = np.array([0, 0, -0.1]) # Point load vector
 
 Fg = np.zeros(ndof) # Eexternal force vector
 c = nv-1
@@ -187,7 +187,6 @@ breakStep = Nsteps # Code will plot until breakStep, but if we reach the final t
 
 # PART 1
 for timeStep in range(Nsteps):
-  print("TESTING TESTING")
   q_new, u_new, a1_new, a2_new = objfun(qOld, uOld, a1_old, a2_old,
                                         freeIndex, dt, tol, refTwist,
                                         massVector, massMatrix,
@@ -212,7 +211,6 @@ plt.figure(2)
 time_array = np.arange(1, Nsteps+1, 1) * dt
 # Plot only until the convergence
 
-print(qOld)
 
 
 print("Finished Task 1")

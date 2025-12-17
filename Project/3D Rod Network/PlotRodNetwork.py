@@ -1,68 +1,120 @@
+import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-def PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None):
-    fig = plt.figure(1)
+
+def PlotRodNetwork(vertexObjs,
+                   edgeObjs,
+                   extra_vertices=None,
+                   extra_edges=None):
+
+    director_scale=0.15
+    tangent_scale=0.25
+    show_directors=True
+    show_edge_directions=True
+
+    fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
-    # ---- Original Vertex Plotting ----
+    # ============================================================
+    #                         VERTICES
+    # ============================================================
     xs = [v.coords[0] for v in vertexObjs]
     ys = [v.coords[1] for v in vertexObjs]
     zs = [v.coords[2] for v in vertexObjs]
     ax.scatter(xs, ys, zs, s=40, color='black')
 
-    # ---- Original Edge Plotting ----
+    # ============================================================
+    #                           EDGES
+    # ============================================================
     for e in edgeObjs:
-        p1 = e.vertex1.coords
-        p2 = e.vertex2.coords
-        xs = [p1[0], p2[0]]
-        ys = [p1[1], p2[1]]
-        zs = [p1[2], p2[2]]
+        p1 = np.asarray(e.vertex1.coords, dtype=float)
+        p2 = np.asarray(e.vertex2.coords, dtype=float)
 
-        ax.plot(xs, ys, zs, color='blue')
+        # Edge geometry
+        ax.plot([p1[0], p2[0]],
+                [p1[1], p2[1]],
+                [p1[2], p2[2]],
+                color='blue')
 
-        # If handled, overlay in red
         if getattr(e, 'handled', False):
-            ax.plot(xs, ys, zs, color='red', linewidth=3)
+            ax.plot([p1[0], p2[0]],
+                    [p1[1], p2[1]],
+                    [p1[2], p2[2]],
+                    color='green',
+                    linewidth=6)
+
+        mid = 0.5 * (p1 + p2)
+
+        # --------------------------------------------------------
+        # Tangent direction (from edge.tangent)
+        # --------------------------------------------------------
+        if show_edge_directions and hasattr(e, 'tangent'):
+            t = np.asarray(e.tangent, dtype=float)
+            t_norm = np.linalg.norm(t)
+
+            if t_norm > 1e-12:
+                t_hat = t / t_norm   # safe even if already unit
+
+                ax.quiver(mid[0], mid[1], mid[2],
+                          t_hat[0], t_hat[1], t_hat[2],
+                          length=tangent_scale,
+                          normalize=True,
+                          color='black',
+                          linewidth=1.5)
+
+        # --------------------------------------------------------
+        # Material directors m1, m2
+        # --------------------------------------------------------
+        if show_directors and hasattr(e, 'm1') and hasattr(e, 'm2'):
+            m1 = np.asarray(e.m1, dtype=float)
+            m2 = np.asarray(e.m2, dtype=float)
+
+            ax.quiver(mid[0], mid[1], mid[2],
+                      m1[0], m1[1], m1[2],
+                      length=director_scale,
+                      normalize=True,
+                      color='red')
+
+            ax.quiver(mid[0], mid[1], mid[2],
+                      m2[0], m2[1], m2[2],
+                      length=director_scale,
+                      normalize=True,
+                      color='orange')
 
     # ============================================================
-    #              OVERLAY: SPECIAL VERTICES & EDGES
+    #                EXTRA VERTICES / EDGES
     # ============================================================
-
-    # ---- Extra Vertices (3 vertices) ----
     if extra_vertices is not None:
-        vert_colors = ['red', 'green', 'blue']  # 3 distinct colors
-        for v, c in zip(extra_vertices, vert_colors):
+        colors = ['red', 'green', 'blue']
+        for v, c in zip(extra_vertices, colors):
             ax.scatter(v.coords[0], v.coords[1], v.coords[2],
-                       s=80, color=c, edgecolor='k', linewidth=1)
+                       s=80, color=c, edgecolor='k')
 
-    # ---- Extra Edges (2 edges) ----
     if extra_edges is not None:
-        edge_colors = ['magenta', 'orange']  # 2 distinct colors
-        for e, c in zip(extra_edges, edge_colors):
+        colors = ['magenta', 'orange']
+        for e, c in zip(extra_edges, colors):
             p1 = e.vertex1.coords
             p2 = e.vertex2.coords
-            xs = [p1[0], p2[0]]
-            ys = [p1[1], p2[1]]
-            zs = [p1[2], p2[2]]
+            ax.plot([p1[0], p2[0]],
+                    [p1[1], p2[1]],
+                    [p1[2], p2[2]],
+                    color=c, linewidth=3)
 
-            ax.plot(xs, ys, zs, color=c, linewidth=3)
+    # ============================================================
+    #                   EQUAL AXIS SCALING
+    # ============================================================
+    all_coords = np.array([v.coords for v in vertexObjs], dtype=float)
+    center = all_coords.mean(axis=0)
+    max_range = np.ptp(all_coords, axis=0).max() / 2.0
 
-    # ---- Equal axis scaling ----
-    all_coords = [v.coords for v in vertexObjs]
-    all_coords = list(zip(*all_coords))
-
-    max_range = max(
-        max(all_coords[0]) - min(all_coords[0]),
-        max(all_coords[1]) - min(all_coords[1]),
-        max(all_coords[2]) - min(all_coords[2])
-    ) / 2.0
-
-    mid = [sum(c)/len(c) for c in all_coords]
-    ax.set_xlim(mid[0] - max_range, mid[0] + max_range)
-    ax.set_ylim(mid[1] - max_range, mid[1] + max_range)
-    ax.set_zlim(mid[2] - max_range, mid[2] + max_range)
+    ax.set_xlim(center[0] - max_range, center[0] + max_range)
+    ax.set_ylim(center[1] - max_range, center[1] + max_range)
+    ax.set_zlim(center[2] - max_range, center[2] + max_range)
 
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     ax.set_zlabel("Z")
+
+    plt.tight_layout()
+    plt.show()

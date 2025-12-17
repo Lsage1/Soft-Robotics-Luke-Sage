@@ -28,6 +28,8 @@ def objfun(qOld, uOld, a1_old, a2_old,
   iter = 0
   error = 10 * tol
 
+
+
   while error > tol:
     # Reference frame
     a1_new, a2_new = computeTimeParallel(a1_old, qOld, q_new) # Time parallel reference frame along the rod
@@ -59,6 +61,6 @@ def objfun(qOld, uOld, a1_old, a2_old,
     error = np.sum(np.abs(f_free)) # Correction
     # Keep in mind that "error = np.sum(np.abs(dq_free))" is ok but tol should be computed based on length
     iter += 1
-    print(q_new, iter)
+    print(iter)
   uNew = (q_new - qOld) / dt
   return q_new, uNew, a1_new, a2_new

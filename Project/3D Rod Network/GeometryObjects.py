@@ -1,7 +1,11 @@
 import numpy as np
 
+vertex_id = 0
 class VertexObj:
     def __init__(self, x,y,z):
+        global vertex_id
+        self.id = vertex_id
+        vertex_id += 1
         self.children = []
         self.index = None
         self.edges = []
@@ -23,6 +27,9 @@ class VertexObj:
         self.f_ext = np.zeros(3)
         self.number = None
         self.test_index = None
+        self.handled = False
+        self.junction_flip0 = []
+        self.junction_flip1 = []
 
 
     def get_attached_vertex(self):
@@ -59,9 +66,12 @@ class VertexObj:
         for i in range(3):
             self.dofs_fixed[i] = bool(dofs[i])
 
-
+edge_id = 0
 class EdgeObj:
     def __init__(self, v1, v2, theta):
+        global edge_id
+        self.id = edge_id
+        edge_id += 1
         self.children = []
         self.parent = None
         self.vertex1 = v1

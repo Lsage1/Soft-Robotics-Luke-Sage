@@ -32,7 +32,7 @@ def tree_CSP_CMD(edge_in, vertex_from, vertexObjs, edgeObjs):
         # 2. Recurse outward
         tree_CSP_CMD(edge_out, vertex_curr, vertexObjs, edgeObjs)
 
-    # ---- Leaving the function performs backtracking ----
+
 
 ########################################################################################################################
 
@@ -49,42 +49,39 @@ def tree_getKappa(edge_in, v_in, vertexObjs, edgeObjs):
 
     # --- Handle junction curvature ---
     if v_in.junction:
-        print("junction going")
         v_in.junction_kappa = []
 
         edges_at_junction = v_in.edges
 
+        # Tangents relative to junction
+        def tangent_relative(edge, v):
+            other = edge.get_other_vertex(v)
+            t = np.array(other.coords) - np.array(v.coords)
+            return t / np.linalg.norm(t)
+
         # Loop over all pairs of edges at junction
-        for i, edgeA in enumerate(edges_at_junction):
-            for j, edgeB in enumerate(edges_at_junction):
-                if j <= i:
-                    continue  # skip duplicates/self-pair
+        for i, (edge0, edge1) in enumerate(v_in.edgePairs):
+            flip0 = v_in.junction_flip0[i]
+            flip1 = v_in.junction_flip1[i]
 
-                # --- Determine tangent vectors relative to junction ---
-                def tangent_relative_to_junction(edge, v):
-                    other = edge.get_other_vertex(v)
-                    t = np.array(other.coords) - np.array(v.coords)
-                    return t / np.linalg.norm(t)
 
-                tA = tangent_relative_to_junction(edgeA, v_in)
-                tB = tangent_relative_to_junction(edgeB, v_in)
+            t0 = tangent_relative(edge0, v_in)
+            t1 = tangent_relative(edge1, v_in)
 
-                # --- Decide if flip is needed ---
-                # Root → branch: no flip
-                if edgeA is not edge_in:
-                    # Branch → branch: flip one if both point outward
-                    if np.dot(tA, tB) > 0:
-                        tA = -tA  # virtual flip
+            if flip0:
+                t0 = -t0
+            if flip1:
+                t1 = -t1
 
-                # --- Construct virtual nodes for curvature ---
-                L = 0.5 * (edgeA.rest_length + edgeB.rest_length)  # or Voronoi length
-                node0 = np.array(v_in.coords) - L * tA
-                node1 = np.array(v_in.coords)
-                node2 = np.array(v_in.coords) + L * tB
+            # --- Construct virtual nodes for curvature ---
+            L = 0.5 * (edge0.rest_length + edge1.rest_length)  # or Voronoi length
+            node0 = np.array(v_in.coords) - L * t0
+            node1 = np.array(v_in.coords)
+            node2 = np.array(v_in.coords) + L * t1
 
-                # --- Compute rest curvature using existing helper ---
-                kappaBar = getKappa_OO(node0, node1, node2, edgeA, edgeB)
-                v_in.junction_kappa.append(kappaBar)
+            # --- Compute rest curvature using existing helper ---
+            kappaBar = getKappa_OO(node0, node1, node2, edge0, edge1)
+            v_in.junction_kappa.append(kappaBar)
 
     # --- Normal recursive pass for child edges ---
     for edge_out in v_in.edges:
@@ -96,15 +93,6 @@ def tree_getKappa(edge_in, v_in, vertexObjs, edgeObjs):
 
         # Compute curvature along the current edge
         v_in.kappa = getKappa_OO(np.array(v_prev.coords), np.array(v_in.coords), np.array(v_next.coords), edge_in, edge_out)
-
-        # Track tree structure
-        edge_in.children.append(edge_out)
-        edge_out.parent = edge_in
-
-        # Allocate ref_twist if branching
-        unhandled_children = [e for e in v_in.edges if not e.handled and e is not edge_in]
-        if len(unhandled_children) >= 1:
-            v_in.ref_twist = np.zeros(len(unhandled_children))
 
         edge_out.handled = True
 

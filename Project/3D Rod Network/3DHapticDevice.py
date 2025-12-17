@@ -18,8 +18,10 @@ from getKappa_OO import getKappa_OO
 from computeMaterialDirectors_OO import computeMaterialDirectors_OO
 from tree_traverse import tree_CSP_CMD
 from tree_traverse import tree_getKappa
-
-print("test2")
+from tree_getKappa_rest import tree_getKappa_rest
+from diagnose_junction import diagnose_junction_bending
+from getFb import getFb_OO_tree
+from orient_edges_downhill import orient_edges_downhill
 
 #vertices = np.array([[0,0,0],
 # #                     [0,0.05,0], [0.05,0,0], [0,-0.05,0], [-0.05, 0,0],
@@ -28,22 +30,12 @@ print("test2")
 #                     [-0.1, 0, -0.1], [-0.05, 0.05, 0], [-0.1, 0.05, 0]])
 #edges = np.array([[0,1], [0,2], [0,3], [0,4], [1,5], [2,6], [3,7], [4,8], [5,9], [6, 10], [7, 11], [8, 12], [8,13], [1,14], [14, 15]])
 
-#vertices = np.array([[0,0,0], [1, 0, 0], [0.02, 0, 0], [0, -0.01, 0], [0, -0.02, 0], [0, 0,-0.01], [0, 0, -0.02]])
-#edges = np.array([[0,1], [1,2], [0,3], [3, 4], [0, 5], [5,6]])
+#vertices = np.array([[0,0,0], [1, 0, 0], [2, 0, 0], [0, -1, 0], [0, -2, 0], [0, 0,-1], [0, 0, -2], [0, 0, -3]])
+#edges = np.array([[0,1], [1,2], [0,3], [3, 4], [0, 5], [5,6], [6,7]])
 
-vertices = np.array([
-    [0.00, 0, 0],
-    [1, 0, 0],
-    [2, 0, 0],
-    [3, 0, 0]
+vertices = np.array([[0,0,0], [1, 0, 0], [0, -1, 0], [0, 0,-1]])
+edges = np.array([[0,1], [0,2], [0,3]])
 
-])
-edges = np.array([
-    [0,1],
-    [1,2],
-    [2,3]
-
-])
 
 nv = len(vertices) # number of nodes
 ne = len(edges)
@@ -69,17 +61,8 @@ for edge in edges:
     v1.add_edge(edgeObj)
     v2.add_edge(edgeObj)
 
-# Get rest angles for each vertex
-for vertex in vertexObjs:
-    for edgePair in vertex.edgePairs:
-        edge1 = edgePair[0]
-        edge2 = edgePair[1]
-        vertex_nm1 = edge1.get_other_vertex(vertex)
-        vertex_np1 = edge2.get_other_vertex(vertex)
-        # Get edge vectors
 
 for vertex in vertexObjs:
-    print(vertex.edges)
 
     # Detect Junctions and Rod Ends
     if len(vertex.edges) >= 3:
@@ -105,7 +88,6 @@ for vertex in vertexObjs:
 
 r0 = 0.0015 # rod radius
 
-PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)
 
 # ELASTIC STIFFNESS
 
@@ -136,6 +118,17 @@ qOld_rot = np.zeros(ndof_rot)
 uOld_tr = np.zeros_like(qOld_tr) # Velocity is zero initially
 # Note: rotational (along edge axis) inertia is not tracked
 
+# ------- MAKE ALL EDGES POINT "DOWNHILL" ------------
+first_end_vertex = next(v for v in vertexObjs if v.end) # Get the first vertex with an end
+end_edge = first_end_vertex.edges[0] # This vertex is an end, so it has one edge, which will be the first in its list
+end_edge.network_root = True
+
+for e in edgeObjs: # Clear handled flags
+    e.handled = False
+
+orient_edges_downhill(end_edge, first_end_vertex)
+
+
 
 # COMPUTE THE FRAMES
 # Reference frame (At t=0, we initialize it with space parallel reference frame but not mandatory)
@@ -144,15 +137,9 @@ uOld_tr = np.zeros_like(qOld_tr) # Velocity is zero initially
 ComputeTangentEdges(edgeObjs, True)
 for edge in edgeObjs:
     edge.rest_tangent = edge.tangent
-    edge.tangent0 = edge.tangent
+    edge.tangent = edge.tangent
 
-print(len(qOld_tr), "Translational Degrees of Freedom")
-print(len(qOld_rot), "Rotational Degrees of Freedom")
-
-
-first_end_vertex = next(v for v in vertexObjs if v.end) # Get the first vertex with an end
-end_edge = first_end_vertex.edges[0] # This vertex is an end, so it has one edge, which will be the first in its list
-end_edge.network_root = True
+print(end_edge.tangent)
 t0 = end_edge.tangent
 
 
@@ -181,11 +168,9 @@ for e in edgeObjs: # Reset handled flags
 v0 = first_end_vertex
 v1 = end_edge.get_other_vertex(v0)
 end_edge.handled = True # Mark starting edge handled
-tree_getKappa(end_edge, v1, vertexObjs, edgeObjs)
+tree_getKappa_rest(end_edge, v1, vertexObjs, edgeObjs)
+#diagnose_junction_bending(vertexObjs, edgeObjs)
 
-for vertex in vertexObjs:
-    vertex.rest_kappa = vertex.kappa.copy()
-    vertex.junction_rest_kappa = [kappa_pair.copy() for kappa_pair in vertex.junction_kappa]
 
 
 ######################### Q_O vector assembly ###########################
@@ -218,7 +203,6 @@ for edge in edgeObjs:
 totalM = totalLength * np.pi * r0**2 * rho  # Total mass of the rod
 dm = totalM / ne
 
-print(totalM)
 
 massVector = np.zeros(ndof)
 for vertex in vertexObjs:
@@ -236,11 +220,13 @@ massMatrix = np.diag(massVector)
 
 # ################### External Force: Point Loads ##################
 
-F_end = 0.1 # CHANGE LATER
-vectorLoad = np.array([0, 0, -1]) # Point load vector
+
+vectorLoad = np.array([0, 0, -.01]) # Point load vector
 
 Fg = np.zeros(ndof) # External force vector
-vertexObjs[3].f_ext = vectorLoad
+#vertexObjs[3].f_ext = vectorLoad
+vertexObjs[1].f_ext = vectorLoad
+
 for v in vertexObjs:
     Fg[v.index] += v.f_ext
 
@@ -248,9 +234,11 @@ for v in vertexObjs:
 ############### BOUNDARY CONDITIONS ####################
 # Set up boundary conditions: Index of fixed degrees of freedom. Form: [[VertexIndex, [X, Y, Z]]...]
 vertexObjs[0].fix([True, True, True])
-vertexObjs[1].fix([True, True, True])
+vertexObjs[2].fix([True, True, True])
+vertexObjs[3].fix([True, True, True])
+
 # Index of edges with fixed rotation. NOTE: Currently no edges have fixed rotation.
-edgeObjs[0].twist_fixed = True
+#edgeObjs[0].twist_fixed = True
 
  # Assemble free_index vector
 ndof_total = len(vertexObjs)*3 + len(edgeObjs) # Total number of DOFS:
@@ -291,10 +279,15 @@ image_folder = "images"
 os.makedirs(image_folder, exist_ok=True)
 frame_files = []
 
+PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)
 
 
-print("entering Loop")
+for vertex in vertexObjs:
+    print( vertex.junction_rest_kappa)
+
+
 for timeStep in range(Nsteps):
+
 
 
   q_new, u_new = objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
@@ -315,6 +308,7 @@ for timeStep in range(Nsteps):
   if timeStep % 2 == 1:
       PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)      # Save frame as image
       frame_path = os.path.join(image_folder, f"frame_{timeStep:05d}.png")
+      plt.title(str(ctime))
       plt.savefig(frame_path, dpi=150)
       frame_files.append(frame_path)
       plt.close()
@@ -339,4 +333,3 @@ print(f"Video saved to {video_path}")
 
 PlotRodNetwork(vertexObjs, edgeObjs, extra_vertices=None, extra_edges=None)  # Save frame as image
 plt.show()
-print(qOld)
