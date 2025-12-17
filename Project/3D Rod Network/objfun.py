@@ -37,13 +37,19 @@ def objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
   #for edge in edgeObjs:
       #edge.theta = np.arctan2(np.sin(edge.theta), np.cos(edge.theta))
 
-    ################ UNPACK OBJECTS INTO QNEW ###################
+  ################ UNPACK QNEW INTO OBJECTS  ###################
     for vertex in vertexObjs:
         vertex.coords = q_new[vertex.index]
 
-    # Insert twist DOFs
+  # Insert twist DOFs
     for edge in edgeObjs:
         edge.theta = q_new[edge.theta_index]
+
+    for edge in edgeObjs:
+      # Wrap theta to [-π, π]
+      edge.theta = np.arctan2(np.sin(edge.theta), np.cos(edge.theta))
+      # Update q_new with wrapped value
+      q_new[edge.theta_index] = edge.theta
 
 
     # Reference frame

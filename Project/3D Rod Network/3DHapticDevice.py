@@ -26,6 +26,9 @@ from diagnose_sudden_forces import diagnose_sudden_forces, check_reference_frame
 from computeTimeParallel_OO import computeTimeParallel_OO
 from ComputeTangentEdges import ComputeTangentEdges
 from getRefTwist_OO import getRefTwist_OO
+from diagnose_material_director_consistency import diagnose_material_director_consistency
+from diagnose_material_director_consistency import diagnose_curvature_at_vertex
+from detect_junction_flip import detect_junction_flip
 
 
 #vertices = np.array([[0,0,0],
@@ -294,7 +297,10 @@ for vertex in vertexObjs:
 
 for timeStep in range(Nsteps):
 
-
+    # Wrap Theta
+    for edge in edgeObjs:
+        qOld[edge.theta_index] = np.arctan2(np.sin(qOld[edge.theta_index]),
+                                            np.cos(qOld[edge.theta_index]))
 
     q_new, u_new = objfun(end_edge, first_end_vertex, edgeObjs, vertexObjs,
                         qOld, uOld,
@@ -306,39 +312,16 @@ for timeStep in range(Nsteps):
     DIAGNOSTICS: 
     """
 
-    # ============= ADD DIAGNOSTICS HERE =============
-    # Compute forces for diagnostics (same as in objfun but after convergence)
 
-    # Unpack q_new into objects
-    for vertex in vertexObjs:
-        vertex.coords = q_new[vertex.index]
-    for edge in edgeObjs:
-        edge.theta = q_new[edge.theta_index]
 
-    # Recompute frames and forces to check
-    ComputeTangentEdges(edgeObjs, True)
-    computeTimeParallel_OO(end_edge, first_end_vertex, edgeObjs, qOld, q_new)
-    getRefTwist_OO(vertexObjs, edgeObjs, end_edge, first_end_vertex)
+    if timeStep == 169:
+        diagnose_material_director_consistency(vertexObjs, edgeObjs, EI)
 
-    for edge in edgeObjs:
-        computeMaterialDirectors_OO(edge)
+        for vertex in vertexObjs:
+            if vertex.junction:
+                diagnose_curvature_at_vertex(vertex, edgeObjs, timeStep, EI)
 
-    for edge in edgeObjs:
-        edge.handled = False
-    tree_getKappa(end_edge, first_end_vertex, vertexObjs, edgeObjs)
-
-    # Compute forces for diagnostics
-    from getFs import getFs
-
-    Fs, Js = getFs(EA, vertexObjs, edgeObjs)
-    Fb, Jb = getFb_OO_tree(first_end_vertex, vertexObjs, edgeObjs, EI, ndof_total=len(q_new))
-
-    # Run diagnostics every N steps (or every step if you want)
-    if timeStep % 5 == 0:  # Check every 5 steps
-        diagnose_sudden_forces(vertexObjs, edgeObjs, Fb, Fs, timeStep, threshold=1e-2)
-
-    # Always check for discontinuities
-    check_reference_frame_continuity(edgeObjs, tolerance=0.1)
+    detect_junction_flip(vertexObjs, edgeObjs, timeStep)
 
     """
     DIAGNOSTICS DONE
